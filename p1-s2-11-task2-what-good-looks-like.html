@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Read Your Map: What Good Looks Like</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000; --white: #FFFFFF; --gray: #E4E4E4;
+    --green: #18DD4C; --green-dark: #07A657; --green-50: #ECFDF1; --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+
+  /* top bar */
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .menu-btn { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px 0 12px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 16px; font-weight: 700; transition: opacity .3s; }
+  .menu-btn:hover { border-color: var(--green-dark); color: var(--green-dark); }
+  .jump { margin-left: auto; margin-right: 12px; display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 15px; font-weight: 800; box-shadow: 0 3px 0 var(--black); white-space: nowrap; }
+  .jump:hover { background: var(--black); color: var(--white); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { border-color: var(--green-dark); color: var(--green-dark); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  .menu-btn:focus-visible, .restart:focus-visible, .pick:focus-visible, .jump:focus-visible, .stab:focus-visible, .fwd:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 4px; }
+
+  /* pages fill the whole canvas; content sits below the top bar */
+  .page { position: absolute; inset: 0; padding: 66px 40px 24px; opacity: 0; pointer-events: none; transition: opacity .4s ease; overflow: hidden; display: flex; flex-direction: column; gap: 12px; }
+  .page.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .45s ease, transform .45s ease; }
+  .page.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .25s !important; } .d2 { transition-delay: .5s !important; } .d3 { transition-delay: .75s !important; }
+
+  /* forward arrow: steps through an example's parts */
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--green-dark); }
+  .fwd:hover svg path { stroke: var(--white); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+
+  /* hand: on the menu it sits in the next card not opened */
+  .hand { position: absolute; width: 58px; height: 64px; pointer-events: none; animation: tap 1.4s ease-in-out infinite; opacity: 0; transition: opacity .3s; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  .pick .hand { right: 8px; bottom: -14px; z-index: 3; }
+  .page.active .pick.next .hand { opacity: 1; transition: opacity .4s ease 1.2s; }
+
+  /* ---------- menu ---------- */
+  .p-menu { justify-content: center; gap: 22px; padding-bottom: 40px; background: var(--green-50); }
+  .p-menu h2 { font-size: 52px; line-height: 1; }
+  .p-menu .lead { font-size: 21px; line-height: 1.45; }
+  .picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .pick { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; text-align: left; padding: 22px 20px 20px; border-radius: 22px; border: 3px solid var(--black); background: var(--white); cursor: pointer; font: inherit; color: inherit; min-height: 230px; box-shadow: 7px 7px 0 var(--black); transition: transform .15s, box-shadow .15s; }
+  .pick:hover { transform: translate(-2px,-2px); box-shadow: 9px 9px 0 var(--black); }
+  .pick.p-good { background: var(--green); }
+  .pick .ico { width: 64px; height: 64px; border-radius: 16px; border: 2.5px solid var(--black); background: var(--white); display: flex; align-items: center; justify-content: center; font-size: 32px; }
+  .pick .name { font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.05; }
+  .pick .sub { font-size: 14px; font-weight: 700; margin-top: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .pick .sub span { padding: 3px 9px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); }
+  .pick .seen { position: absolute; top: -14px; right: -14px; width: 40px; height: 40px; border-radius: 50%; background: var(--black); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; transform: scale(0); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+  .pick.visited .seen { transform: scale(1); }
+
+  /* ---------- page header + part tabs ---------- */
+  .phead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .phead h2 { font-size: 32px; line-height: 1.05; margin-right: 4px; }
+  .score { display: inline-flex; padding: 4px 11px; border-radius: 999px; border: 2.5px solid var(--black); font-size: 14px; font-weight: 800; background: var(--white); }
+  .good .score { background: var(--green); }
+  .stabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .stab { font: inherit; font-size: 15px; font-weight: 700; padding: 6px 13px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; }
+  .stab[aria-selected="true"] { background: var(--black); color: var(--white); }
+  .stab.seen:not([aria-selected="true"]) { background: var(--green-200); }
+
+  /* parts inside an example */
+  .parts { position: relative; flex: 1; min-height: 0; }
+  .part { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .part.on { opacity: 1; pointer-events: auto; }
+  .part .lbl { font-size: 14px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--green-dark); }
+  .fern { font-size: 17px; line-height: 1.4; padding: 8px 12px; border-radius: 10px; background: var(--white); border: 2px solid var(--green-dark); }
+  .good.page { background: var(--green-50); }
+
+  /* tables */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.38; background: var(--white); }
+  .tbl th { background: var(--green-200); text-align: left; padding: 7px 10px; border: 2px solid var(--black); font-size: 15px; }
+  .tbl td { padding: 7px 10px; border: 2px solid var(--black); vertical-align: top; }
+  .tbl td.num, .tbl th.num { text-align: center; white-space: nowrap; }
+  .tbl td.felt { text-align: center; font-weight: 800; }
+  .small-note { font-size: 16px; font-style: italic; }
+
+  /* quoted answers */
+  .ans { border: 2.5px solid var(--black); border-radius: 14px; background: var(--white); padding: 12px 16px; font-size: 19px; line-height: 1.45; }
+  .ans b.k { display: block; font-size: 14px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--green-dark); margin-bottom: 4px; }
+  .bad .ans b.k { color: #555; }
+  .ans em { font-style: italic; }
+  .conf { display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: 999px; background: var(--green); border: 2px solid var(--black); font-style: normal; font-weight: 800; font-size: 15px; }
+  .bad .conf { background: var(--white); }
+  .padr { margin-right: 104px; }
+
+  /* score annotations */
+  .ann { border-radius: 14px; padding: 12px 16px; font-size: 19px; line-height: 1.42; border: 2.5px solid var(--black); background: var(--white); }
+  .ann b.crit { display: inline-block; padding: 1px 10px; border-radius: 999px; margin-right: 6px; font-size: 15px; }
+  .good .ann b.crit { background: var(--green); }
+  .bad .ann b.crit { background: var(--gray); }
+  .oneline { font-size: 18px; line-height: 1.42; padding: 10px 14px; border-left: 6px solid var(--green); background: var(--green-50); }
+
+  /* ---------- rubric ---------- */
+  .p-rubric { justify-content: center; }
+  .p-rubric h2 { font-size: 36px; }
+  .rub { width: 100%; border-collapse: separate; border-spacing: 0; border: 3px solid var(--black); border-radius: 16px; overflow: hidden; font-size: 16px; line-height: 1.38; background: var(--white); }
+  .rub th, .rub td { padding: 10px 12px; text-align: left; vertical-align: top; border-right: 1.5px solid var(--black); border-bottom: 1.5px solid var(--black); }
+  .rub tr > *:last-child { border-right: none; }
+  .rub tr:last-child > * { border-bottom: none; }
+  .rub thead th { background: var(--black); color: var(--white); font-size: 15px; }
+  .rub thead th.l0 { background: var(--white); color: var(--black); }
+  .rub thead th.l1 { background: var(--green-200); color: var(--black); }
+  .rub thead th.l2 { background: var(--green); color: var(--black); }
+  .rub tbody th { background: var(--green-50); font-size: 18px; }
+  .rub td.test { font-style: italic; font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <button class="menu-btn hidden" id="toMenu" type="button" aria-label="Back to the menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Menu
+    </button>
+    <button class="jump hidden" id="jump" type="button"></button>
+    <button class="restart" id="restart" type="button">↺ Start over</button>
+  </div>
+
+  <!-- ================= Menu ================= -->
+  <section class="page p-menu active" id="menu" aria-live="polite">
+    <h2 class="serif auto">What Good Looks Like</h2>
+    <p class="lead auto d1">This task is checked against three criteria from the rubric:</p>
+    <div class="picks auto d2">
+      <button class="pick" type="button" data-go="rubric"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">📏</span><span class="name">The rubric</span><span class="sub"><span>Specific</span><span>Connected</span><span>Committed</span></span></button>
+      <button class="pick p-good" type="button" data-go="good"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">✅</span><span class="name">Strong example</span><span class="sub"><span>2 · 2 · 2</span></span></button>
+      <button class="pick" type="button" data-go="bad"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">❌</span><span class="name">Not-yet example</span><span class="sub"><span>0 · 0 · 0</span></span></button>
+    </div>
+  </section>
+
+  <!-- ================= Rubric ================= -->
+  <section class="page p-rubric" id="rubric">
+    <h2 class="serif auto">📏 The rubric</h2>
+    <table class="rub auto d1">
+      <thead><tr><th>Criterion</th><th>The test question</th><th class="l0">0 · Not yet</th><th class="l1">1 · Getting there</th><th class="l2">2 · Strong</th></tr></thead>
+      <tbody>
+        <tr><th>Specific</th><td class="test">Could a designer find the exact screen or moment you mean?</td><td>No: feelings and adjectives</td><td>Some answers name a moment, others don't</td><td>Every answer names the screen, action, or moment</td></tr>
+        <tr><th>Connected</th><td class="test">Can a reader trace every claim back to a row in your log?</td><td>Claims stand on their own</td><td>Some claims cite moment #s</td><td>Every stage, finding, and bet points to a moment #</td></tr>
+        <tr><th>Committed</th><td class="test">Do you make a clear call and say why, including what it costs?</td><td>Lists possibilities, or sits on the fence</td><td>Makes a call, but without reasons or trade-offs</td><td>Makes one call, explains it, and names the trade-off and how confident you are</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================= Strong example ================= -->
+  <section class="page good" id="good">
+    <div class="phead auto">
+      <h2 class="serif">✅ Strong example</h2>
+      <span class="score">Specific 2</span><span class="score">Connected 2</span><span class="score">Committed 2</span>
+    </div>
+    <div class="stabs auto" role="tablist"></div>
+    <div class="parts">
+      <div class="part" data-tab="Session 2">
+        <p class="fern">📌 These examples continue <b>Fernly</b>, the made-up plant-care app from the last task. Your doc will be about BeReal.</p>
+        <span class="lbl">Fernly's Session 2 (for reference) · Thursday, 8:02 am, getting ready for class</span>
+        <table class="tbl">
+          <tr><th class="num">#</th><th>What happened</th><th>What I thought</th><th class="num">Felt</th></tr>
+          <tr><td class="num">6</td><td>Notification: "Your Golden Pothos is thirsty"</td><td>"Oh right, I forgot I had this app."</td><td class="felt">0</td></tr>
+          <tr><td class="num">7</td><td>Tapped it; the app opened straight to a "Mark as watered" button</td><td>"Easy." I tapped it.</td><td class="felt">+1</td></tr>
+          <tr><td class="num">8</td><td>A badge popped up: "Plant parent: Level 1!"</td><td>"Level of what? Weird."</td><td class="felt">−1</td></tr>
+          <tr><td class="num">9</td><td>Home screen again: "Water in 4 days", nothing else</td><td>"Back to waiting."</td><td class="felt">−2</td></tr>
+        </table>
+      </div>
+      <div class="part" data-tab="C">
+        <span class="lbl">Part C: Journey map</span>
+        <table class="tbl">
+          <tr><th>Stage</th><th class="num">Moments</th><th>High or low?</th><th>Why is this its own stage?</th></tr>
+          <tr><td><b>Figuring out my plant</b></td><td class="num">1–3</td><td>High (+2 at #3)</td><td>My goal was "tell the app what I have", and it ended when it named my plant.</td></tr>
+          <tr><td><b>Saying yes to reminders</b></td><td class="num">4</td><td>Neutral</td><td>The app asked something new of me: permission.</td></tr>
+          <tr><td><b>Waiting</b></td><td class="num">5, 9</td><td>Low (−2 at #9)</td><td>I left the app. There was nothing for me to do until the next reminder.</td></tr>
+          <tr><td><b>Coming back to water</b></td><td class="num">6–8</td><td>Mixed</td><td>The app pulled me back in, and my goal became "water the plant".</td></tr>
+        </table>
+        <p class="small-note">(The full map also has the What I did / thought / felt columns.)</p>
+      </div>
+      <div class="part" data-tab="D 1–2">
+        <span class="lbl">Part D</span>
+        <div class="ans padr"><b class="k">1. Core mechanic</b><em>"Fernly's core mechanic is a watering countdown: the app only needs you when a plant is due."</em></div>
+        <div class="ans padr"><b class="k">2. Working, #3</b><em>"Photo ID named my plant in 3 seconds. It turned 'I don't know what I have' into trust in one tap, so I believed its watering schedule."</em></div>
+      </div>
+      <div class="part" data-tab="D 3">
+        <span class="lbl">Part D</span>
+        <div class="ans padr"><b class="k">3. Broken, #9 (and #5)</b><em>"After I mark a plant as watered, the home screen is just 'Water in 4 days'. There's nothing to do or learn, so I close the app and only come back when a notification drags me."</em></div>
+      </div>
+      <div class="part" data-tab="D 4">
+        <span class="lbl">Part D</span>
+        <div class="ans padr"><b class="k">4. Why</b><em>"(1) Beginners aren't overwhelmed. (2) Plants really don't need daily attention, so daily content would feel fake. (3) Fewer screens to build."</em><br><b>Trade-off:</b> <em>"It gains a calm, honest app. It gives up any reason to open it between waterings, so the habit depends entirely on notifications."</em></div>
+      </div>
+      <div class="part" data-tab="E 1">
+        <span class="lbl">Part E</span>
+        <div class="ans padr"><b class="k">1. MAU bet</b><em>"If the in-between days had one small thing worth checking, like how my plant changed this week, I'd expect more first-month users to still be opening it a month later, because right now a swiped-away notification is the only thing bringing them back."</em><br><span class="conf">Confidence: Medium</span></div>
+      </div>
+      <div class="part" data-tab="E 2–3">
+        <span class="lbl">Part E</span>
+        <div class="ans padr"><b class="k">2. Expectation vs. reality</b><em>"I said it would nag me. It barely talks to me, and that silence is what made me forget it."</em></div>
+        <div class="ans padr"><b class="k">3. AI use note</b><em>"I asked AI to group my moment log into stages. I kept 'Waiting' as one stage; I hadn't noticed #5 and #9 were the same experience. I rejected its 'Onboarding' label because it lumped photo ID in with notifications."</em></div>
+      </div>
+      <div class="part" data-tab="Scores">
+        <span class="lbl">How it scores</span>
+        <div class="ann"><b class="crit">Specific: 2</b> Every answer names a screen or action ("Water in 4 days", "Mark as watered", "Plant parent: Level 1!").</div>
+        <div class="ann"><b class="crit">Connected: 2</b> Every stage lists its moments, and the working, broken and MAU answers each start from a moment #.</div>
+        <div class="ann padr"><b class="crit">Committed: 2</b> One broken moment, three defended reasons, a trade-off that names what Fernly <em>gives up</em>, and a bet with an honest confidence level.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Not-yet example ================= -->
+  <section class="page bad" id="bad">
+    <div class="phead auto">
+      <h2 class="serif">❌ Not-yet example</h2>
+      <span class="score">Specific 0</span><span class="score">Connected 0</span><span class="score">Committed 0</span>
+    </div>
+    <div class="stabs auto" role="tablist"></div>
+    <div class="parts">
+      <div class="part" data-tab="Part C">
+        <p class="fern">📌 These examples continue <b>Fernly</b>, the made-up plant-care app from the last task. Your doc will be about BeReal.</p>
+        <span class="lbl">Part C: Journey map</span>
+        <table class="tbl">
+          <tr><th>Stage</th><th class="num">Moments</th><th>High or low?</th><th>Why is this its own stage?</th></tr>
+          <tr><td><b>Onboarding</b></td><td class="num"></td><td>High</td><td>It's a standard stage.</td></tr>
+          <tr><td><b>Usage</b></td><td class="num"></td><td>Medium</td><td>Users use the app.</td></tr>
+          <tr><td><b>Retention</b></td><td class="num"></td><td>Low</td><td>Important for growth.</td></tr>
+        </table>
+      </div>
+      <div class="part" data-tab="Part D">
+        <span class="lbl">Part D</span>
+        <div class="ans padr"><b class="k">1. Core mechanic</b><em>"Fernly is a plant care app."</em></div>
+        <div class="ans padr"><b class="k">2. Working</b><em>"The design is clean."</em></div>
+        <div class="ans padr"><b class="k">3. Broken</b><em>"The app could be more engaging."</em></div>
+        <div class="ans padr"><b class="k">4. Why</b><em>"To make money, to help users, to be simple."</em> <b>Trade-off:</b> <em>"There are pros and cons."</em></div>
+      </div>
+      <div class="part" data-tab="Part E">
+        <span class="lbl">Part E</span>
+        <div class="ans padr"><b class="k">1. MAU bet</b><em>"If they improved engagement, MAU would go up."</em><br><span class="conf">Confidence: High</span></div>
+        <div class="ans padr"><b class="k">2. Expectation vs. reality</b><em>"It was as expected."</em></div>
+        <div class="ans padr"><b class="k">3. AI use note</b><em>"Used ChatGPT."</em></div>
+      </div>
+      <div class="part" data-tab="Scores">
+        <span class="lbl">How it scores</span>
+        <div class="ann"><b class="crit">Specific: 0</b> "Clean", "more engaging" and "standard" are adjectives. No screen or moment is named anywhere.</div>
+        <div class="ann"><b class="crit">Connected: 0</b> The stage rows list no moments, and nothing traces back to the log. These stages could describe any app.</div>
+        <div class="ann padr"><b class="crit">Committed: 0</b> "Pros and cons" isn't a trade-off, three generic reasons aren't defended, and <b>High</b> confidence with no evidence isn't honest.</div>
+        <p class="oneline padr"><b>The difference in one line:</b> the strong example makes calls you could argue with. The not-yet example makes statements nobody could disagree with, because they don't say anything.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- forward arrow (steps through an example's parts) -->
+  <button class="fwd hidden" id="fwd" type="button" aria-label="Next part">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+
+  const pages = [...document.querySelectorAll('.page')];
+  const picks = [...document.querySelectorAll('.pick')];
+  const toMenu = document.getElementById('toMenu');
+  const jump = document.getElementById('jump');
+  const fwd = document.getElementById('fwd');
+  const visited = new Set();
+  const JUMPS = { rubric: ['good', 'See the strong example →'], good: ['bad', 'See the not-yet example →'], bad: ['good', '← See the strong example'] };
+
+  // each example is a short series of parts, with tabs across the top
+  const examples = {};
+  ['good', 'bad'].forEach(id => {
+    const page = document.getElementById(id);
+    const parts = [...page.querySelectorAll('.part')];
+    const tabs = page.querySelector('.stabs');
+    tabs.innerHTML = parts.map((p, i) => `<button class="stab" type="button" role="tab" data-i="${i}">${p.dataset.tab}</button>`).join('');
+    const btns = [...tabs.querySelectorAll('.stab')];
+    examples[id] = { parts, btns, i: 0 };
+    btns.forEach(b => b.addEventListener('click', () => showPart(id, +b.dataset.i)));
+  });
+  function showPart(id, i) {
+    const ex = examples[id];
+    ex.i = i;
+    ex.parts.forEach((p, k) => p.classList.toggle('on', k === i));
+    ex.btns.forEach((b, k) => { b.setAttribute('aria-selected', k === i ? 'true' : 'false'); if (k === i) b.classList.add('seen'); });
+    fwd.classList.toggle('hidden', i === ex.parts.length - 1);
+  }
+
+  function markNext() {
+    const next = picks.find(p => !visited.has(p.dataset.go));
+    picks.forEach(p => p.classList.toggle('next', p === next));
+  }
+
+  let currentId = 'menu';
+  function show(id) {
+    currentId = id;
+    pages.forEach(p => p.classList.toggle('active', p.id === id));
+    toMenu.classList.toggle('hidden', id === 'menu');
+    jump.classList.toggle('hidden', !JUMPS[id]);
+    if (JUMPS[id]) { jump.dataset.go = JUMPS[id][0]; jump.textContent = JUMPS[id][1]; }
+    if (examples[id]) showPart(id, 0); else fwd.classList.add('hidden');
+    if (id !== 'menu') { visited.add(id); picks.forEach(p => p.classList.toggle('visited', visited.has(p.dataset.go))); }
+    markNext();
+  }
+
+  picks.forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+  jump.addEventListener('click', () => show(jump.dataset.go));
+  toMenu.addEventListener('click', () => show('menu'));
+  fwd.addEventListener('click', () => { const ex = examples[currentId]; if (ex && ex.i < ex.parts.length - 1) showPart(currentId, ex.i + 1); });
+  document.getElementById('restart').addEventListener('click', () => {
+    visited.clear(); picks.forEach(p => p.classList.remove('visited'));
+    Object.values(examples).forEach(ex => ex.btns.forEach(b => b.classList.remove('seen')));
+    show('menu');
+  });
+  window.addEventListener('resize', fit);
+
+  // preview helper: #rubric, #good, #bad; add -N to open part N (e.g. #good-3)
+  const m = location.hash.slice(1).match(/^(rubric|good|bad)(?:-(\d))?$/);
+  show(m ? m[1] : 'menu');
+  if (m && m[2] && examples[m[1]]) showPart(m[1], parseInt(m[2], 10) - 1);
+</script>
+</body>
+</html>
