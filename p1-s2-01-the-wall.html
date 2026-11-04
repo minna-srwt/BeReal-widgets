@@ -63,28 +63,24 @@
   .sheet svg.sketch { width: 100%; height: auto; max-height: 90px; }
   .sheet .mood { width: 100%; height: auto; max-height: 34px; }
 
-  /* ---------- slide 1: the wall ---------- */
-  .s1 { background: var(--green-200); display: flex; flex-direction: column; justify-content: center; gap: 44px; padding-bottom: 110px; }
-  .s1 .hook { font-size: 48px; line-height: 1.12; }
-  .row { display: flex; gap: 16px; padding-right: 104px; }
-  .row .sheet { flex: 1; height: 190px; opacity: 0; transform: translateY(-24px) rotate(var(--r)); transition: opacity .35s ease, transform .45s cubic-bezier(.3,1.5,.5,1); }
-  .slide.active .row .sheet { opacity: 1; transform: rotate(var(--r)); }
-  .string { position: absolute; left: 0; right: 0; height: 3px; background: var(--black); opacity: .25; }
-
-  /* ---------- slide 2: video ---------- */
-  .s2 { display: flex; align-items: center; justify-content: center; padding-bottom: 28px; }
+  /* ---------- slide 1: hook + the clip ---------- */
+  .s1 { display: flex; flex-direction: column; gap: 16px; padding-bottom: 26px; }
+  .s1 .hook { font-size: 32px; line-height: 1.2; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
   .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--green-50); }
   .video iframe { width: 100%; height: 100%; border: 0; display: block; }
 
-  /* ---------- slide 3: storyboard panel ---------- */
-  .s3 { background: var(--green-50); display: flex; align-items: center; justify-content: center; padding: 70px 40px 112px; }
-  .panel { position: relative; width: 100%; max-width: 1000px; background: var(--white); border: 4px solid var(--black); border-radius: 6px; padding: 26px 34px 28px; box-shadow: 10px 10px 0 var(--green-200); }
-  .panel .thumbs { display: flex; gap: 12px; margin-bottom: 18px; }
-  .panel .thumb { flex: 1; height: 62px; border: 2px solid var(--black); border-radius: 3px; background: var(--green-50); display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(.8); transition: opacity .3s ease, transform .4s cubic-bezier(.3,1.5,.5,1); }
-  .slide.active .panel .thumb { opacity: 1; transform: none; }
-  .panel p { font-size: 25px; line-height: 1.5; }
-  .panel .pin { position: absolute; top: -20px; left: -16px; font-size: 34px; transform: rotate(-12deg); }
-  .pencil { position: absolute; right: -30px; top: -26px; transform: rotate(25deg); }
+  /* ---------- slide 2: Project Snow White on the wall ---------- */
+  .s2 { background: var(--green-200); display: flex; flex-direction: column; justify-content: center; gap: 26px; padding-bottom: 110px; }
+  .row { display: flex; gap: 14px; }
+  .row .sheet { flex: 1; height: 112px; padding: 16px 6px 6px; opacity: 0; transform: translateY(-24px) rotate(var(--r)); transition: opacity .35s ease, transform .45s cubic-bezier(.3,1.5,.5,1); }
+  .row .sheet .sketch { max-height: 54px; }
+  .row .sheet .mood { max-height: 26px; }
+  .slide.active .row .sheet { opacity: 1; transform: rotate(var(--r)); }
+  .note { position: relative; background: var(--white); border: 3px solid var(--black); border-radius: 6px; padding: 22px 28px; box-shadow: 8px 8px 0 rgba(0,0,0,.12); transform: rotate(-.4deg); }
+  .note::before { content: ""; position: absolute; top: -14px; left: 50%; width: 90px; height: 24px; margin-left: -45px; background: var(--green-50); border: 2px solid var(--black); transform: rotate(3deg); }
+  .note p { font-size: 23px; line-height: 1.48; }
+  .note .pin { position: absolute; top: -22px; left: -16px; font-size: 32px; transform: rotate(-12deg); }
 
   /* ---------- slide 4: the point of view ---------- */
   .s4 { display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-bottom: 50px; }
@@ -137,31 +133,27 @@
       <button class="back hidden" id="back" type="button" aria-label="Previous slide">
         <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <div class="dots" id="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="dots" id="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
     </div>
     <button class="restart" id="restart" type="button">↺ Start over</button>
   </div>
 
-  <!-- ================= Slide 1: the wall ================= -->
-  <section class="slide s1 active" data-bg="green" aria-live="polite">
+  <!-- ================= Slide 1: hook + the clip ================= -->
+  <section class="slide s1 active" aria-live="polite">
     <p class="hook serif auto">That's where she found it: sheets of paper taped to the wall in a row, mapping out an Airbnb customer's entire journey — a host, a guest, start to finish.</p>
-    <div class="row" id="row" role="img" aria-label="Six storyboard sheets taped to a wall, following one trip from start to finish"></div>
-  </section>
-
-  <!-- ================= Slide 2: the clip ================= -->
-  <section class="slide s2">
-    <div class="video auto">
-      <iframe id="clip" data-src="https://www.youtube.com/embed/0FgZ1VVxEBo?start=843&end=1156" title="Customer-led growth | Georgiana Laudi — the Airbnb wall" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    <div class="vwrap auto d1">
+      <div class="video">
+        <iframe id="clip" data-src="https://www.youtube.com/embed/0FgZ1VVxEBo?start=843&end=1156" title="Customer-led growth | Georgiana Laudi — the Airbnb wall" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      </div>
     </div>
   </section>
 
-  <!-- ================= Slide 3: Project Snow White ================= -->
-  <section class="slide s3">
-    <div class="panel auto">
+  <!-- ================= Slide 2: Project Snow White, on the wall ================= -->
+  <section class="slide s2" data-bg="green">
+    <div class="row" id="row" role="img" aria-label="Six storyboard sheets taped to a wall, following one trip from start to finish"></div>
+    <div class="note auto d2">
       <span class="pin" aria-hidden="true">📌</span>
-      <div class="thumbs" id="thumbs" aria-hidden="true"></div>
       <p>Internally, the team called it <strong>Project Snow White</strong>, after the Walt Disney biography that inspired it: Disney's team had to invent the storyboard just to make <em>Snow White</em> work, because the film was too complex to hold in anyone's head at once. Airbnb hired an actual Pixar storyboard artist to draw the keyframes of a customer's trip the same way.</p>
-      <svg class="pencil" width="140" height="26" viewBox="0 0 140 26" aria-hidden="true"><rect x="2" y="3" width="104" height="20" rx="3" fill="#18DD4C" stroke="#000" stroke-width="2.5"/><rect x="2" y="3" width="16" height="20" fill="#E4E4E4" stroke="#000" stroke-width="2.5"/><path d="M106 3 L136 13 L106 23 Z" fill="#FFFFFF" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/><path d="M128 10 L136 13 L128 16 Z" fill="#000"/></svg>
     </div>
   </section>
 
@@ -245,8 +237,6 @@
   const ROT = [-2, 1.5, -1, 2, -1.5, 1];
   document.getElementById('row').innerHTML = SKETCH.map((_, i) => sheetHTML(i, ROT[i], true)).join('');
   document.getElementById('mini').innerHTML = SKETCH.map((_, i) => sheetHTML(i, ROT[(i + 2) % 6], false).replace(`${0.5 + i * 0.35}s`, `${1.6 + i * 0.2}s`)).join('');
-  document.getElementById('thumbs').innerHTML = [0, 2, 3, 5].map((k, i) =>
-    `<div class="thumb" style="transition-delay:${0.5 + i * 0.25}s"><svg width="48" height="50" viewBox="0 0 80 84">${SKETCH[k]}</svg></div>`).join('');
 
   const slides = [...document.querySelectorAll('.slide')];
   const dots = [...document.querySelectorAll('.dot')];
@@ -256,7 +246,7 @@
   const clip = document.getElementById('clip');
   const pov = document.getElementById('pov');
   const s4 = document.getElementById('s4');
-  const POV_SLIDE = 3;
+  const POV_SLIDE = 2;
   let current = 0, handTimer;
 
   function showFwd() {
@@ -274,7 +264,7 @@
     dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
     back.classList.toggle('hidden', current === 0);
     // load the clip only on its slide, and unload it when leaving so it stops playing
-    if (current === 1) { if (!clip.src) clip.src = clip.dataset.src; }
+    if (current === 0) { if (!clip.src) clip.src = clip.dataset.src; }
     else if (clip.src) clip.removeAttribute('src');
     showFwd();
   }
@@ -289,7 +279,7 @@
   document.getElementById('restart').addEventListener('click', () => { pov.classList.remove('open'); s4.classList.remove('revealed'); go(0); });
   window.addEventListener('resize', fit);
 
-  // preview helper: open with #2 … #5 to start on that slide (#4open shows the revealed card)
+  // preview helper: open with #2 … #4 to start on that slide (#3open shows the revealed card)
   if (location.hash.includes('open')) { pov.classList.add('open'); s4.classList.add('revealed'); }
   const start = parseInt(location.hash.slice(1), 10);
   go(start >= 1 && start <= slides.length ? start - 1 : 0);
