@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meet Gia Laudi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000; --white: #FFFFFF; --gray: #E4E4E4;
+    --green: #18DD4C; --green-dark: #07A657; --green-50: #ECFDF1; --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+
+  /* top bar */
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft { display: flex; align-items: center; gap: 16px; }
+  .dots { display: flex; gap: 8px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--gray); transition: all .3s; }
+  .dot.done { background: var(--green-200); }
+  .dot.now { background: var(--green); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--gray); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { border-color: var(--green-dark); color: var(--green-dark); }
+
+  /* slides */
+  .slide { position: absolute; top: 60px; left: 0; right: 0; bottom: 0; padding: 4px 40px 28px; opacity: 0; pointer-events: none; transform: translateX(30px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active { opacity: 1; pointer-events: auto; transform: none; }
+  .slide.left { transform: translateX(-30px); }
+
+  .auto { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .5s !important; } .d2 { transition-delay: 1.1s !important; } .d3 { transition-delay: 1.7s !important; }
+
+  a { color: var(--green-dark); font-weight: 600; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  a:hover { color: var(--black); text-decoration-color: var(--green); }
+
+  /* ---------- navigation ---------- */
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: none; background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--green-dark); }
+  .fwd:hover { background: var(--green-dark); }
+  .fwd:hover svg path { stroke: var(--white); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--gray); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { border-color: var(--green-dark); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  .fwd:focus-visible, .back:focus-visible, .restart:focus-visible, a:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 4px; }
+
+  /* pointing hand that taps the forward arrow */
+  .hand { position: absolute; right: 22px; bottom: 6px; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+
+  /* ---------- slide 1: who Gia is ---------- */
+  .s1 { display: grid; grid-template-columns: 1fr 300px; column-gap: 36px; align-items: center; }
+  .s1 .intro { font-size: 30px; line-height: 1.45; }
+  .s1 .side { display: flex; flex-direction: column; gap: 18px; padding-bottom: 70px; }
+  .xcard { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 2px solid var(--gray); border-radius: 14px; background: var(--white); text-decoration: none; color: var(--black); font-weight: 600; font-size: 17px; transition: border-color .2s, background .2s; }
+  .xcard:hover { border-color: var(--green-dark); background: var(--green-50); color: var(--black); }
+  .xcard .logo { flex: none; width: 40px; height: 40px; border-radius: 10px; background: var(--green-50); display: flex; align-items: center; justify-content: center; }
+  .xcard small { display: block; font-weight: 400; font-size: 13px; color: var(--green-dark); margin-top: 2px; }
+  .thread { stroke-dasharray: 300; stroke-dashoffset: 300; }
+  .slide.active .thread { animation: draw 1.4s ease .9s forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .pin { opacity: 0; transition: opacity .4s ease 2.2s; }
+  .slide.active .pin { opacity: 1; }
+
+  /* ---------- slide 2: the episode + the consultancy ---------- */
+  .s2 { display: flex; flex-direction: column; justify-content: space-between; gap: 18px; }
+  .episode { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; background: var(--green-50); border: 1.5px solid var(--gray); border-radius: 18px; padding: 18px 24px; }
+  .episode p { font-size: 26px; line-height: 1.42; }
+  .eq { display: flex; gap: 4px; align-items: end; height: 34px; margin-top: 6px; justify-content: center; }
+  .eq span { width: 6px; background: var(--green); border-radius: 3px; height: 30%; }
+  .slide.active .eq span { animation: eq 1s ease-in-out infinite; }
+  .eq span:nth-child(2) { animation-delay: .2s !important; } .eq span:nth-child(3) { animation-delay: .4s !important; } .eq span:nth-child(4) { animation-delay: .1s !important; }
+  @keyframes eq { 0%,100% { height: 25%; } 50% { height: 100%; } }
+  .s2 .consult { font-size: 27px; line-height: 1.45; }
+  .strip { display: grid; grid-template-columns: auto 1fr; gap: 36px; align-items: end; padding-right: 116px; }
+  .growth { display: flex; gap: 18px; align-items: end; height: 110px; }
+  .g { width: 64px; border-radius: 8px 8px 0 0; position: relative; transform-origin: bottom; transform: scaleY(0); transition: transform 1s ease; }
+  .slide.active .g { transform: scaleY(1); }
+  .g1 { height: 34px; background: var(--gray); transition-delay: 1.6s !important; }
+  .g2 { height: 68px; background: var(--green-200); transition-delay: 2.1s !important; }
+  .g3 { height: 104px; background: var(--green); transition-delay: 2.6s !important; }
+  .g b { position: absolute; top: -26px; left: 0; right: 0; text-align: center; font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 22px; color: var(--green-dark); }
+  .funnelq .q { opacity: 0; transform: scale(.4); transform-origin: 60px 52px; transform-box: view-box; transition: opacity .5s ease 3.2s, transform .5s cubic-bezier(.3,1.6,.5,1) 3.2s; }
+  .slide.active .funnelq .q { opacity: 1; transform: scale(1); }
+
+  /* ---------- slide 3: the clip ---------- */
+  .s3 { display: grid; grid-template-columns: minmax(240px, 1fr) 2fr; column-gap: 32px; align-items: center; }
+  .s3 .lead { font-size: 30px; line-height: 1.42; }
+  .s3 .lead em { font-style: italic; font-weight: 700; color: var(--green-dark); }
+  .video { width: 100%; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; border: 3px solid var(--green); background: var(--green-50); justify-self: end; }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* narrow embeds: stack the sentence above the video */
+  .canvas.narrow .s3 { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); row-gap: 16px; }
+  .canvas.narrow .video { justify-self: center; width: auto; height: 100%; max-width: 100%; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .thread { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
+    <button class="restart" id="restart" type="button">↺ Start over</button>
+  </div>
+
+  <!-- ================= Slide 1 ================= -->
+  <section class="slide s1 active" aria-live="polite">
+    <p class="intro auto">This project's thinking comes from <a href="https://x.com/ggiiaa" target="_blank" rel="noopener">Georgiana "Gia" Laudi</a>, the consultant who worked with SparkToro on the exact mystery you just read about, and someone who's spent years inside the growth problems of real SaaS companies.</p>
+    <div class="side">
+      <!-- case file: SparkToro, threaded to Gia -->
+      <svg class="auto d1" viewBox="0 0 300 200" width="300" height="200" role="img" aria-label="The SparkToro case file, connected to Gia">
+        <path d="M14 34 h86 l14 16 h172 v136 h-272 z" fill="#ECFDF1" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/>
+        <text x="28" y="78" font-family="Inter" font-size="12" font-weight="700" letter-spacing="1.5" fill="#07A657">CASE FILE</text>
+        <text x="28" y="112" font-family="DM Serif Text" font-size="32" fill="#000">SparkToro</text>
+        <line x1="28" y1="132" x2="200" y2="132" stroke="#E4E4E4" stroke-width="3"/>
+        <line x1="28" y1="148" x2="160" y2="148" stroke="#E4E4E4" stroke-width="3"/>
+        <path d="M250 20 v34 a10 10 0 0 1 -20 0 v-30 a6 6 0 0 1 12 0 v26" fill="none" stroke="#07A657" stroke-width="3" stroke-linecap="round"/>
+        <path class="thread" d="M250 186 C 250 196, 150 186, 150 200" fill="none" stroke="#18DD4C" stroke-width="3" stroke-dasharray="6 6"/>
+        <circle class="pin" cx="250" cy="176" r="7" fill="#18DD4C" stroke="#000" stroke-width="2"/>
+      </svg>
+      <a class="xcard auto d2" href="https://x.com/ggiiaa" target="_blank" rel="noopener">
+        <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4 L20 20 M20 4 L4 20" stroke="#000" stroke-width="3" stroke-linecap="round"/></svg></span>
+        <span>Gia Laudi (@ggiiaa) on X<small>x.com/ggiiaa</small></span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ================= Slide 2 ================= -->
+  <section class="slide s2">
+    <div class="episode auto">
+      <div>
+        <svg width="46" height="56" viewBox="0 0 46 56" aria-hidden="true">
+          <rect x="13" y="3" width="20" height="32" rx="10" fill="#FFFFFF" stroke="#000" stroke-width="2.5"/>
+          <path d="M6 26 a17 17 0 0 0 34 0" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="23" y1="43" x2="23" y2="52" stroke="#000" stroke-width="2.5"/>
+          <line x1="14" y1="53" x2="32" y2="53" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="eq" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      </div>
+      <p>This project unpacks particularly her conversation with Lenny in the podcast episode <a href="https://www.youtube.com/watch?v=0FgZ1VVxEBo" target="_blank" rel="noopener"><strong>Customer-led growth | Georgiana Laudi (Forget The Funnel).</strong></a></p>
+    </div>
+    <p class="consult auto d1">Gia runs a consultancy called <a href="https://forgetthefunnel.com/" target="_blank" rel="noopener"><strong>Forget the Funnel</strong></a>, where she works directly with companies to find growth opportunities hiding in plain sight — routinely doubling or tripling conversion rates once she gets there.</p>
+    <div class="strip">
+      <svg class="funnelq auto d2" viewBox="0 0 120 110" width="132" height="120" aria-hidden="true">
+        <path d="M8 10 H112 L72 64 V100 L48 92 V64 Z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+        <g class="q">
+          <circle cx="60" cy="52" r="30" fill="#18DD4C" stroke="#000" stroke-width="2.5"/>
+          <text x="60" y="66" text-anchor="middle" font-family="DM Serif Text" font-size="40" fill="#000">?</text>
+        </g>
+      </svg>
+      <div class="growth" aria-label="Conversion rates doubling and tripling" role="img">
+        <div class="g g1"><b>1×</b></div>
+        <div class="g g2"><b>2×</b></div>
+        <div class="g g3"><b>3×</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Slide 3 ================= -->
+  <section class="slide s3">
+    <p class="lead auto">Perhaps, this clip from the podcast will help you understand why her consultancy is called <em>“Forget”</em> the funnel.</p>
+    <div class="video auto d1">
+      <iframe id="clip" data-src="https://www.youtube.com/embed/0FgZ1VVxEBo?start=0&end=62" title="Customer-led growth | Georgiana Laudi — clip, 0:00 to 1:02" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    </div>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true">
+    <path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+    <line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/>
+    <line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/>
+    <line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/>
+  </svg>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    canvas.classList.toggle('narrow', w / scale < 960);
+  }
+  fit();
+
+  const slides = [...document.querySelectorAll('.slide')];
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd');
+  const back = document.getElementById('back');
+  const hand = document.getElementById('hand');
+  const clip = document.getElementById('clip');
+  let current = 0, handTimer;
+
+  function go(to) {
+    slides.forEach((s, i) => {
+      s.classList.remove('active', 'left');
+      if (i === to) s.classList.add('active');
+      else if (i < to) s.classList.add('left');
+    });
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    fwd.classList.toggle('hidden', current === slides.length - 1);
+    // load the clip only on the last slide, and unload it when leaving so it stops playing
+    if (current === slides.length - 1) { if (!clip.src) clip.src = clip.dataset.src; }
+    else if (clip.src) clip.removeAttribute('src');
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1) handTimer = setTimeout(() => hand.style.opacity = 1, current === 1 ? 3400 : 1800);
+  }
+
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => go(0));
+  window.addEventListener('resize', fit);
+
+  // preview helper: open with #2 or #3 to start on that slide
+  const start = parseInt(location.hash.slice(1), 10);
+  go(start >= 1 && start <= slides.length ? start - 1 : 0);
+</script>
+</body>
+</html>
