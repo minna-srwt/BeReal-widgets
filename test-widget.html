@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000;
+    --white: #FFFFFF;
+    --gray: #E4E4E4;
+    --green: #18DD4C;
+    --green-dark: #07A657;
+    --green-50: #ECFDF1;
+    --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--white); }
+  body {
+    font-family: 'Inter', sans-serif;
+    color: var(--black);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stage {
+    width: 100%; max-width: 800px; height: 600px; max-height: 100vh;
+    background: var(--white);
+    border: 1px solid var(--gray);
+    border-radius: 16px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 28px; padding: 40px; text-align: center;
+  }
+  h1 { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 40px; line-height: 1.15; }
+  p { font-size: 17px; line-height: 1.6; max-width: 520px; color: var(--black); }
+  .card {
+    width: 100%; max-width: 520px; min-height: 120px;
+    border-radius: 14px; border: 2px solid var(--gray);
+    background: var(--green-50);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; font-size: 18px; line-height: 1.5;
+  }
+  .card .hidden { color: var(--green-dark); font-weight: 600; }
+  .card.revealed { border-color: var(--green); background: var(--white); }
+  button {
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 16px;
+    background: var(--green); color: var(--black);
+    border: none; border-radius: 999px; padding: 14px 28px; cursor: pointer;
+    box-shadow: 0 0 0 0 rgba(24, 221, 76, 0.55);
+    animation: pulse 1.8s ease-out infinite;
+  }
+  button:hover { background: var(--green-dark); color: var(--white); }
+  button:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 3px; }
+  button.done { animation: none; background: var(--gray); color: var(--black); cursor: default; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(24, 221, 76, 0.55); }
+    70% { box-shadow: 0 0 0 14px rgba(24, 221, 76, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(24, 221, 76, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) { button { animation: none; } }
+</style>
+</head>
+<body>
+  <main class="stage">
+    <h1>Widget pipeline test</h1>
+    <p>If you can see this heading in a serif font and this text in Inter, the fonts are loading. Now click the green button.</p>
+    <div class="card" id="card"><span class="hidden">Something is hidden here…</span></div>
+    <button id="reveal" type="button">Reveal it</button>
+  </main>
+<script>
+  const btn = document.getElementById('reveal');
+  const card = document.getElementById('card');
+  btn.addEventListener('click', () => {
+    card.classList.add('revealed');
+    card.innerHTML = '✅ It works: the file is hosted, the click works, and the embed fits. Ready for real content.';
+    btn.textContent = 'Done';
+    btn.classList.add('done');
+    btn.disabled = true;
+  });
+</script>
+</body>
+</html>
