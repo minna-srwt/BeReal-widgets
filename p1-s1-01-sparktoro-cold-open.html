@@ -62,6 +62,21 @@
   .box.open ~ .box-hand { opacity: 0 !important; transition-delay: 0s; }
   @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
 
+
+  /* ---------- slide 0: cold open ---------- */
+  .s0 { display: grid; grid-template-columns: 1.25fr 1fr; column-gap: 24px; align-items: center; padding-bottom: 60px; }
+  .s0 .hook { font-size: 60px; line-height: 1.12; }
+  .s0 .hook a { font-weight: 400; text-decoration-thickness: 4px; text-underline-offset: 7px; }
+  .rocket { justify-self: center; width: 100%; max-width: 360px; height: auto; }
+  .slide.active .rocket .ship { animation: lift 3.2s ease-in-out infinite; }
+  @keyframes lift { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+  .slide.active .rocket .flame { animation: flicker .35s ease-in-out infinite alternate; transform-origin: 180px 300px; }
+  @keyframes flicker { from { transform: scaleY(.85); } to { transform: scaleY(1.15); } }
+  .rocket .spark { opacity: 0; }
+  .slide.active .rocket .spark { animation: twinkle 2.4s ease-in-out infinite; }
+  @keyframes twinkle { 0%,100% { opacity: 0; transform: scale(.6); } 50% { opacity: 1; transform: scale(1); } }
+  .rocket .spark { transform-box: fill-box; transform-origin: center; }
+
   /* ---------- slide 1 ---------- */
   .s1 { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; }
   .s1 .intro { font-size: 26px; line-height: 1.48; }
@@ -134,14 +149,34 @@
       <button class="back hidden" id="back" type="button" aria-label="Previous slide">
         <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <div class="dots" id="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="dots" id="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
     </div>
     <button class="restart" id="restart" type="button">↺ Start over</button>
   </div>
 
+  <!-- ================= Slide 0: cold open ================= -->
+  <section class="slide s0 active" aria-live="polite">
+    <p class="hook serif auto">A few years ago, a startup called <a href="https://sparktoro.com/" target="_blank" rel="noopener">SparkToro</a> launched with everything going for it.</p>
+    <svg class="rocket auto d1" viewBox="0 0 360 400" role="img" aria-label="A rocket lifting off">
+      <g class="spark"><path d="M60 80 l6 16 16 6 -16 6 -6 16 -6 -16 -16 -6 16 -6z" fill="#18DD4C"/></g>
+      <g class="spark" style="animation-delay:.8s"><path d="M300 60 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5z" fill="#B5F7C9" stroke="#07A657" stroke-width="1.5"/></g>
+      <g class="spark" style="animation-delay:1.6s"><path d="M310 220 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z" fill="#18DD4C"/></g>
+      <g class="spark" style="animation-delay:1.2s"><circle cx="70" cy="240" r="6" fill="#B5F7C9" stroke="#07A657" stroke-width="1.5"/></g>
+      <g class="ship">
+        <path class="flame" d="M160 292 Q180 370 200 292 Z" fill="#18DD4C" stroke="#07A657" stroke-width="2"/>
+        <path d="M180 30 C 225 70 235 150 225 250 L 135 250 C 125 150 135 70 180 30 Z" fill="#FFFFFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M135 200 L 100 262 L 138 252 Z M225 200 L 260 262 L 222 252 Z" fill="#ECFDF1" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+        <rect x="150" y="250" width="60" height="42" rx="8" fill="#E4E4E4" stroke="#000" stroke-width="4"/>
+        <circle cx="180" cy="130" r="26" fill="#18DD4C" stroke="#000" stroke-width="4"/>
+        <circle cx="180" cy="130" r="12" fill="#FFFFFF" stroke="#000" stroke-width="3"/>
+      </g>
+      <line x1="40" y1="388" x2="320" y2="388" stroke="#E4E4E4" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+  </section>
+
   <!-- ================= Slide 1 ================= -->
-  <section class="slide s1 active" aria-live="polite">
-    <p class="intro auto">A few years ago, a startup called <a href="https://sparktoro.com/" target="_blank" rel="noopener">SparkToro</a> launched with everything going for it. SparkToro is an <strong class="hl">audience research tool that helps marketers figure out who their customers really are</strong> and where to find them — built by <a href="https://medium.com/@randfish" target="_blank" rel="noopener">Rand Fishkin</a>, best known for co-founding <a href="https://moz.com/" target="_blank" rel="noopener">Moz</a>, one of the biggest names in SEO. People paid attention.</p>
+  <section class="slide s1">
+    <p class="intro auto">SparkToro is an <strong class="hl">audience research tool that helps marketers figure out who their customers really are</strong> and where to find them — built by <a href="https://medium.com/@randfish" target="_blank" rel="noopener">Rand Fishkin</a>, best known for co-founding <a href="https://moz.com/" target="_blank" rel="noopener">Moz</a>, one of the biggest names in SEO. People paid attention.</p>
     <div class="charts">
       <div class="chart c1 auto d1">
         <div class="lbl">Traffic</div>
@@ -282,7 +317,7 @@
   document.getElementById('restart').addEventListener('click', () => { box.classList.remove('open'); go(0); });
   window.addEventListener('resize', fit);
 
-  // preview helper: open with #2 or #3 to start on that slide
+  // preview helper: open with #2, #3 or #4 to start on that slide
   const start = parseInt(location.hash.slice(1), 10);
   go(start >= 1 && start <= slides.length ? start - 1 : 0);
 </script>
