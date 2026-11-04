@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Habit Loop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000; --white: #FFFFFF; --gray: #E4E4E4;
+    --green: #18DD4C; --green-dark: #07A657; --green-50: #ECFDF1; --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+
+  /* top bar */
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft { display: flex; align-items: center; gap: 16px; }
+  .dots { display: flex; gap: 8px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--gray); transition: all .3s; }
+  .dot.done { background: var(--green-200); }
+  .dot.now { background: var(--green); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--gray); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { border-color: var(--green-dark); color: var(--green-dark); }
+
+  /* slides */
+  .slide { position: absolute; top: 60px; left: 0; right: 0; bottom: 0; padding: 4px 40px 28px; opacity: 0; pointer-events: none; transform: translateX(30px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active { opacity: 1; pointer-events: auto; transform: none; }
+  .slide.left { transform: translateX(-30px); }
+
+  .auto { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .5s !important; } .d2 { transition-delay: 1.1s !important; } .d3 { transition-delay: 1.7s !important; } .d4 { transition-delay: 2.3s !important; }
+
+  a { color: var(--green-dark); font-weight: 600; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  a:hover { color: var(--black); text-decoration-color: var(--green); }
+
+  /* ---------- navigation ---------- */
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: none; background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--green-dark); }
+  .fwd:hover { background: var(--green-dark); }
+  .fwd:hover svg path { stroke: var(--white); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--gray); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { border-color: var(--green-dark); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  .fwd:focus-visible, .back:focus-visible, .restart:focus-visible, .lever:focus-visible, a:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 4px; }
+
+  /* pointing hand cues */
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; }
+  #hand { right: 22px; bottom: 6px; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+
+  /* ---------- slide 1: hook ---------- */
+  .s1 { display: grid; grid-template-columns: 1.5fr 1fr; column-gap: 30px; align-items: center; padding-bottom: 60px; }
+  .s1 .hook { font-size: 56px; line-height: 1.12; }
+  .fishing { justify-self: center; width: 100%; max-width: 300px; height: auto; }
+  .bait { transform-box: view-box; transform-origin: 150px 0; }
+  .slide.active .bait { animation: sway 3s ease-in-out infinite; }
+  @keyframes sway { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+
+  /* ---------- slide 2: habit loop ---------- */
+  .s2 { display: grid; grid-template-columns: 0.8fr 1.4fr; column-gap: 20px; align-items: center; padding-bottom: 40px; }
+  .canvas.narrow .s2 { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); row-gap: 6px; padding-bottom: 20px; }
+  .canvas.narrow .s2 .lead { font-size: 36px; padding-right: 20px; }
+  .s2 .lead { font-size: 40px; line-height: 1.2; }
+  .loop { width: 100%; height: 100%; max-height: 500px; }
+  .loop .spinner { transform-box: view-box; transform-origin: 310px 230px; }
+  .slide.active .loop .spinner { animation: spin 4.5s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loop .node circle.bg { transform-box: fill-box; transform-origin: center; }
+  .slide.active .loop .node circle.bg { animation: hit 4.5s linear infinite; }
+  .slide.active .loop .n-action circle.bg { animation-delay: .75s; }
+  .slide.active .loop .n-reward circle.bg { animation-delay: 2.25s; }
+  .slide.active .loop .n-trigger circle.bg { animation-delay: 3.75s; }
+  @keyframes hit { 0% { fill: #18DD4C; transform: scale(1.15); } 14% { fill: #FFFFFF; transform: scale(1); } 100% { fill: #FFFFFF; transform: scale(1); } }
+
+  /* ---------- slide 3: never finishes ---------- */
+  .s3 { display: flex; flex-direction: column; justify-content: space-between; gap: 14px; padding-bottom: 36px; }
+  .s3 p { font-size: 26px; line-height: 1.5; }
+  .s3 .quote { background: var(--green-50); box-shadow: inset 0 -4px 0 var(--green-200); padding: 0 3px; font-weight: 600; }
+  .spiral { width: 100%; height: 150px; padding-right: 110px; }
+  .spiral .coil { stroke-dasharray: 2600; stroke-dashoffset: 2600; }
+  .slide.active .spiral .coil { animation: draw 4s ease-in-out .8s forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  /* ---------- slide 4: dopamine + slot machine ---------- */
+  .s4 { display: grid; grid-template-columns: 1.25fr 1fr; column-gap: 36px; align-items: center; padding-bottom: 50px; }
+  .s4 p { font-size: 26px; line-height: 1.5; }
+  .s4 p + p { margin-top: 16px; }
+  .slot { position: relative; justify-self: center; width: 300px; }
+  .machine { position: relative; width: 250px; border: 4px solid var(--black); border-radius: 26px 26px 18px 18px; background: var(--green-50); padding: 20px 18px 24px; }
+  .machine .top { height: 26px; border-radius: 13px; background: var(--green); border: 3px solid var(--black); margin-bottom: 16px; }
+  .reels { display: flex; gap: 8px; background: var(--white); border: 3px solid var(--black); border-radius: 12px; padding: 8px; }
+  .reel { flex: 1; height: 70px; overflow: hidden; border-radius: 6px; background: var(--white); border: 2px solid var(--gray); }
+  .strip { display: flex; flex-direction: column; }
+  .strip div { height: 70px; display: flex; align-items: center; justify-content: center; flex: none; }
+  .machine .tray { margin-top: 16px; height: 22px; border-radius: 6px; background: var(--white); border: 3px solid var(--black); }
+  .machine.win { animation: winpulse .5s ease 3; }
+  @keyframes winpulse { 50% { box-shadow: 0 0 0 10px rgba(24,221,76,.45); } }
+  .lever { position: absolute; left: 250px; top: 30px; width: 50px; height: 150px; border: none; background: none; cursor: pointer; padding: 0; }
+  .lever .arm { transform-box: view-box; transform-origin: 14px 120px; transition: transform .25s ease; }
+  .lever.pulled .arm { transform: scaleY(-1); }
+  .lhand { left: 250px; top: 0; }
+  .slot.ready .lhand { opacity: 1; }
+  .hearts span { position: absolute; font-size: 26px; color: var(--green); opacity: 0; }
+  .machine.win ~ .hearts span { animation: rise 1.4s ease-out forwards; }
+  @keyframes rise { 0% { opacity: 0; transform: translateY(0) scale(.6); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-110px) scale(1.2); } }
+
+  /* ---------- slide 5: signs of addiction ---------- */
+  .s5 { display: flex; flex-direction: column; justify-content: center; gap: 20px; padding-bottom: 30px; }
+  .s5 .lead { font-size: 42px; line-height: 1.15; }
+  .signs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .sign { display: grid; grid-template-columns: 64px 1fr; gap: 16px; align-items: center; border: 2px solid var(--gray); border-radius: 18px; padding: 16px 20px 16px 16px; background: var(--white); }
+  .sign:nth-child(1), .sign:nth-child(4) { background: var(--green-50); }
+  .sign .ic { width: 64px; height: 64px; border-radius: 14px; border: 2.5px solid var(--black); background: var(--white); display: flex; align-items: center; justify-content: center; }
+  .sign p { font-size: 22px; line-height: 1.35; }
+  .sign b { font-size: 26px; display: block; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .spiral .coil { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
+    <button class="restart" id="restart" type="button">↺ Start over</button>
+  </div>
+
+  <!-- ================= Slide 1: hook ================= -->
+  <section class="slide s1 active" aria-live="polite">
+    <p class="hook serif auto">Once infinite scroll took over, everything else became a tool to keep users hooked.</p>
+    <svg class="fishing auto d1" viewBox="0 0 300 420" role="img" aria-label="A phone dangling on a fishing hook">
+      <g class="bait">
+        <line x1="150" y1="0" x2="150" y2="130" stroke="#000" stroke-width="3"/>
+        <!-- hook -->
+        <path d="M150 130 V200 a35 35 0 0 1 -70 0 v-18" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round"/>
+        <path d="M80 180 l-9 16 17 -5 z" fill="#000"/>
+        <!-- phone hanging from the hook -->
+        <circle cx="115" cy="246" r="8" fill="none" stroke="#000" stroke-width="3"/>
+        <rect x="75" y="252" width="80" height="140" rx="16" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+        <rect x="85" y="270" width="60" height="96" rx="6" fill="#ECFDF1" stroke="#000" stroke-width="2"/>
+        <rect x="93" y="280" width="44" height="22" rx="4" fill="#18DD4C"/>
+        <rect x="93" y="310" width="44" height="22" rx="4" fill="#B5F7C9"/>
+        <rect x="93" y="340" width="44" height="18" rx="4" fill="#E4E4E4"/>
+        <circle cx="115" cy="378" r="5" fill="#000"/>
+      </g>
+    </svg>
+  </section>
+
+  <!-- ================= Slide 2: the habit loop ================= -->
+  <section class="slide s2">
+    <p class="lead serif auto">The <a href="https://medium.com/@garrettsimm22/the-importance-of-the-habit-loop-26061aa11cd0" target="_blank" rel="noopener">habit loop</a> is simple and powerful: trigger, action, reward.</p>
+    <svg class="loop auto d1" viewBox="-80 50 780 450" role="img" aria-label="The habit loop. Trigger: a notification, a badge, a 'ding'. Action: you open or scroll the app without thinking. Reward: likes, comments, shares, streaks. Then back to trigger.">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3" markerHeight="3" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#000"/></marker>
+      </defs>
+      <circle cx="310" cy="230" r="150" fill="none" stroke="#ECFDF1" stroke-width="26"/>
+      <path d="M205.8 122.1 A150 150 0 0 1 414.2 122.1" fill="none" stroke="#B5F7C9" stroke-width="10" stroke-linecap="round" marker-end="url(#ah)"/>
+      <path d="M455.5 193.7 A150 150 0 0 1 351.3 374.2" fill="none" stroke="#18DD4C" stroke-width="10" stroke-linecap="round" marker-end="url(#ah)"/>
+      <path d="M268.7 374.2 A150 150 0 0 1 164.5 193.7" fill="none" stroke="#07A657" stroke-width="10" stroke-linecap="round" marker-end="url(#ah)"/>
+      <text x="310" y="222" text-anchor="middle" font-family="DM Serif Text" font-size="30" fill="#000">The habit</text>
+      <text x="310" y="256" text-anchor="middle" font-family="DM Serif Text" font-size="30" fill="#000">loop</text>
+      <!-- travelling dot -->
+      <g class="spinner"><circle cx="310" cy="80" r="11" fill="#000"/></g>
+      <!-- trigger -->
+      <g class="node n-trigger">
+        <circle class="bg" cx="180" cy="155" r="36" fill="#FFFFFF" stroke="#000" stroke-width="3.5"/>
+        <path d="M180 136 a12 12 0 0 1 12 12 v10 l5 6 h-34 l5 -6 v-10 a12 12 0 0 1 12 -12z" fill="none" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M175 168 a5 5 0 0 0 10 0" fill="none" stroke="#000" stroke-width="3"/>
+        <text x="132" y="112" text-anchor="end" font-family="DM Serif Text" font-size="38" fill="#07A657">Trigger</text>
+        <text x="132" y="142" text-anchor="end" font-family="Inter" font-size="22" fill="#000">a notification,</text>
+        <text x="132" y="170" text-anchor="end" font-family="Inter" font-size="22" fill="#000">a badge, a 'ding'</text>
+      </g>
+      <!-- action -->
+      <g class="node n-action">
+        <circle class="bg" cx="440" cy="155" r="36" fill="#FFFFFF" stroke="#000" stroke-width="3.5"/>
+        <rect x="428" y="134" width="24" height="40" rx="5" fill="none" stroke="#000" stroke-width="3"/>
+        <path d="M440 146 v14 M434 154 l6 6 6 -6" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="488" y="112" font-family="DM Serif Text" font-size="38" fill="#07A657">Action</text>
+        <text x="488" y="142" font-family="Inter" font-size="22" fill="#000">you open or scroll</text>
+        <text x="488" y="170" font-family="Inter" font-size="22" fill="#000">the app without</text>
+        <text x="488" y="198" font-family="Inter" font-size="22" fill="#000">thinking</text>
+      </g>
+      <!-- reward -->
+      <g class="node n-reward">
+        <circle class="bg" cx="310" cy="380" r="36" fill="#FFFFFF" stroke="#000" stroke-width="3.5"/>
+        <path d="M310 394 l-15 -14 a9 9 0 0 1 15 -11 a9 9 0 0 1 15 11 z" fill="#18DD4C" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/>
+        <text x="310" y="452" text-anchor="middle" font-family="DM Serif Text" font-size="38" fill="#07A657">Reward</text>
+        <text x="310" y="484" text-anchor="middle" font-family="Inter" font-size="22" fill="#000">likes, comments, shares, streaks</text>
+      </g>
+    </svg>
+  </section>
+
+  <!-- ================= Slide 3: the loop never finishes ================= -->
+  <section class="slide s3">
+    <p class="auto">This is also why the loop never really finishes. Laudi points out that <span class="quote">"recurring revenue businesses cannot think about growth as ending at acquisition"</span> — the same logic applies to an ad-supported app. Getting you to download isn't the finish line; every session after that is still being optimized, because your continued attention is the thing being sold. That's why the loop keeps escalating instead of settling once you're a regular user.</p>
+    <svg class="spiral auto d1" viewBox="0 0 900 150" preserveAspectRatio="xMinYMid meet" role="img" aria-label="A download flag, followed by a loop that keeps growing">
+      <!-- download "finish line" that isn't one -->
+      <line x1="40" y1="30" x2="40" y2="130" stroke="#000" stroke-width="3"/>
+      <path d="M40 30 h42 l-10 12 10 12 h-42 z" fill="#E4E4E4" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M61 34 v12 M56 42 l5 5 5 -5" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+      <text x="40" y="148" text-anchor="middle" font-family="Inter" font-size="14" font-weight="700" fill="#000">download</text>
+      <!-- loops that escalate -->
+      <path class="coil" d="M40 100 C 90 100, 110 80, 110 70 C 110 55, 90 55, 90 70 C 90 95, 150 105, 190 95 C 240 82, 240 50, 215 45 C 190 40, 185 75, 210 95 C 250 125, 340 120, 370 85 C 400 50, 380 20, 350 20 C 315 20, 305 75, 345 105 C 400 145, 520 135, 560 85 C 600 35, 580 8, 545 8 C 500 8, 490 80, 545 115 C 610 150, 760 140, 820 75 C 850 40, 870 30, 895 25" fill="none" stroke="#18DD4C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </section>
+
+  <!-- ================= Slide 4: dopamine + slot machine ================= -->
+  <section class="slide s4">
+    <div>
+      <p class="auto">Each reward gives your brain a small burst of dopamine. Over time, your brain starts expecting the next hit, which makes the loop harder to break.</p>
+      <p class="auto d1">(It's the same principle slot machines use: reward you irregularly so you keep trying.)</p>
+    </div>
+    <div class="slot auto d1" id="slot">
+      <div class="machine" id="machine">
+        <div class="top"></div>
+        <div class="reels">
+          <div class="reel"><div class="strip"></div></div>
+          <div class="reel"><div class="strip"></div></div>
+          <div class="reel"><div class="strip"></div></div>
+        </div>
+        <div class="tray"></div>
+      </div>
+      <div class="hearts" aria-hidden="true"><span style="left:40px;top:40px">♥</span><span style="left:110px;top:20px;animation-delay:.2s">♥</span><span style="left:180px;top:44px;animation-delay:.4s">♥</span></div>
+      <button class="lever" id="lever" type="button" aria-label="Pull the slot machine lever">
+        <svg width="50" height="150" viewBox="0 0 50 150" aria-hidden="true">
+          <rect x="0" y="108" width="20" height="30" rx="6" fill="#E4E4E4" stroke="#000" stroke-width="3"/>
+          <g class="arm"><line x1="14" y1="120" x2="30" y2="26" stroke="#000" stroke-width="6" stroke-linecap="round"/><circle cx="31" cy="20" r="14" fill="#18DD4C" stroke="#000" stroke-width="3"/></g>
+        </svg>
+      </button>
+      <svg class="hand lhand" viewBox="0 0 58 64" aria-hidden="true" style="left:268px;top:4px">
+        <path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+        <line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ================= Slide 5: signs of addiction ================= -->
+  <section class="slide s5">
+    <p class="lead serif auto">This cycle brings classic signs of addiction:</p>
+    <div class="signs">
+      <div class="sign auto d1">
+        <div class="ic"><svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><rect x="4" y="24" width="8" height="8" fill="#B5F7C9" stroke="#000" stroke-width="2"/><rect x="14" y="16" width="8" height="16" fill="#18DD4C" stroke="#000" stroke-width="2"/><rect x="24" y="6" width="8" height="26" fill="#07A657" stroke="#000" stroke-width="2"/></svg></div>
+        <p><b>Tolerance</b> (needing more engagement for the same satisfaction).</p>
+      </div>
+      <div class="sign auto d2">
+        <div class="ic"><svg width="30" height="40" viewBox="0 0 30 40" aria-hidden="true"><rect x="3" y="3" width="24" height="34" rx="5" fill="#ECFDF1" stroke="#000" stroke-width="2.5"/><path d="M10 14 l10 10 M20 14 l-10 10" stroke="#000" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+        <p><b>Withdrawal</b> (uneasy when you can't check).</p>
+      </div>
+      <div class="sign auto d3">
+        <div class="ic"><svg width="40" height="36" viewBox="0 0 40 36" aria-hidden="true"><path d="M3 4 h20 v14 h-12 l-6 5 v-5 h-2 z" fill="#18DD4C" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/><path d="M37 14 h-10 v14 h4 v5 l6-5 z" fill="#FFFFFF" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/><path d="M28 6 l-3 4 4 0 -3 4" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <p><b>Conflict</b> (arguments or guilt around use).</p>
+      </div>
+      <div class="sign auto d4">
+        <div class="ic"><svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><path d="M28 12 A12 12 0 1 0 30 22" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/><path d="M22 10 l7 2 1 -7" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="18" r="4" fill="#18DD4C"/></svg></div>
+        <p><b>Relapse</b> (falling back into heavy use after a break).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true">
+    <path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+    <line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/>
+  </svg>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    canvas.classList.toggle('narrow', w / scale < 960);
+  }
+  fit();
+
+  // ----- slot machine reels -----
+  const ICONS = {
+    heart: '<svg width="34" height="32" viewBox="0 0 34 32"><path d="M17 29 L4 16 a8 8 0 0 1 13 -10 a8 8 0 0 1 13 10 z" fill="#18DD4C" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/></svg>',
+    comment: '<svg width="34" height="32" viewBox="0 0 34 32"><path d="M4 4 h26 v18 h-16 l-7 6 v-6 h-3 z" fill="#ECFDF1" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/></svg>',
+    share: '<svg width="34" height="32" viewBox="0 0 34 32"><path d="M4 26 C 8 14, 16 10, 24 10 V4 L32 13 L24 22 V16 C 16 16, 10 18, 4 26 Z" fill="#B5F7C9" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/></svg>',
+    blank: '<svg width="34" height="32" viewBox="0 0 34 32"><line x1="8" y1="16" x2="26" y2="16" stroke="#E4E4E4" stroke-width="5" stroke-linecap="round"/></svg>'
+  };
+  const ORDER = ['heart', 'blank', 'comment', 'share', 'blank', 'heart', 'comment', 'blank'];
+  const strips = [...document.querySelectorAll('.strip')];
+  const ROW = 70, LOOPS = 3;
+  strips.forEach(s => { s.innerHTML = Array(LOOPS + 1).fill(ORDER).flat().map(k => `<div>${ICONS[k]}</div>`).join(''); });
+
+  const machine = document.getElementById('machine');
+  const lever = document.getElementById('lever');
+  const slot = document.getElementById('slot');
+  let pulls = 0, spinning = false;
+
+  function setReels(targets, animate) {
+    strips.forEach((s, i) => {
+      s.style.transition = 'none';
+      s.style.transform = 'translateY(0)';
+      void s.offsetHeight;
+      const stop = (LOOPS * ORDER.length + targets[i]) * ROW;
+      s.style.transition = animate ? `transform ${1.1 + i * 0.45}s cubic-bezier(.2,.7,.2,1)` : 'none';
+      s.style.transform = animate ? `translateY(-${stop}px)` : `translateY(-${targets[i] * ROW}px)`;
+    });
+  }
+  // reward irregularly: the second pull pays out, after that it's a 1-in-3 chance
+  function pickTargets() {
+    const win = pulls === 2 || (pulls > 2 && Math.random() < 1 / 3);
+    if (win) return { win, t: [0, 5, 0] };
+    let t;
+    do { t = [0, 1, 2].map(() => Math.floor(Math.random() * ORDER.length)); }
+    while (ORDER[t[0]] === ORDER[t[1]] && ORDER[t[1]] === ORDER[t[2]]);
+    return { win, t };
+  }
+  lever.addEventListener('click', () => {
+    if (spinning) return;
+    spinning = true; pulls++;
+    slot.classList.remove('ready');
+    machine.classList.remove('win');
+    lever.classList.add('pulled');
+    setTimeout(() => lever.classList.remove('pulled'), 350);
+    const { win, t } = pickTargets();
+    setReels(t, true);
+    setTimeout(() => {
+      spinning = false;
+      if (win) { void machine.offsetWidth; machine.classList.add('win'); }
+      showFwdHand(400);
+    }, 2100);
+  });
+
+  // ----- slides -----
+  const slides = [...document.querySelectorAll('.slide')];
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd');
+  const back = document.getElementById('back');
+  const hand = document.getElementById('hand');
+  let current = 0, handTimer, leverTimer;
+
+  // on the slot-machine slide, the hand points at the lever until it's pulled once
+  function showFwdHand(delay) {
+    clearTimeout(handTimer);
+    hand.style.opacity = 0;
+    if (current === slides.length - 1) return;
+    if (current === 3 && pulls === 0) return;
+    handTimer = setTimeout(() => hand.style.opacity = 1, delay);
+  }
+
+  function go(to) {
+    slides.forEach((s, i) => {
+      s.classList.remove('active', 'left');
+      if (i === to) s.classList.add('active');
+      else if (i < to) s.classList.add('left');
+    });
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    fwd.classList.toggle('hidden', current === slides.length - 1);
+    clearTimeout(leverTimer);
+    slot.classList.remove('ready');
+    if (current === 3 && pulls === 0) leverTimer = setTimeout(() => slot.classList.add('ready'), 1800);
+    showFwdHand(current === 0 ? 2400 : 2800);
+  }
+
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => {
+    pulls = 0; machine.classList.remove('win'); setReels([1, 2, 4], false); go(0);
+  });
+  window.addEventListener('resize', fit);
+
+  setReels([1, 2, 4], false);
+  // preview helper: open with #2 … #5 to start on that slide
+  const start = parseInt(location.hash.slice(1), 10);
+  go(start >= 1 && start <= slides.length ? start - 1 : 0);
+</script>
+</body>
+</html>
