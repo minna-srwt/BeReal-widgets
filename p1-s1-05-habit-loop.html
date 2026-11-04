@@ -114,14 +114,20 @@
   @keyframes rise { 0% { opacity: 0; transform: translateY(0) scale(.6); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-110px) scale(1.2); } }
 
   /* ---------- slide 5: signs of addiction ---------- */
-  .s5 { display: flex; flex-direction: column; justify-content: center; gap: 20px; padding-bottom: 30px; }
-  .s5 .lead { font-size: 42px; line-height: 1.15; }
-  .signs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .sign { display: grid; grid-template-columns: 64px 1fr; gap: 16px; align-items: center; border: 2px solid var(--gray); border-radius: 18px; padding: 16px 20px 16px 16px; background: var(--white); }
+  .s5 { display: flex; flex-direction: column; justify-content: center; gap: 16px; padding-bottom: 100px; }
+  .s5 .lead { font-size: 40px; line-height: 1.12; }
+  .signs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .sign { display: grid; grid-template-columns: 64px 1fr; gap: 16px; align-items: center; border: 2px solid var(--gray); border-radius: 18px; padding: 10px 18px 10px 14px; background: var(--white); }
   .sign:nth-child(1), .sign:nth-child(4) { background: var(--green-50); }
   .sign .ic { width: 64px; height: 64px; border-radius: 14px; border: 2.5px solid var(--black); background: var(--white); display: flex; align-items: center; justify-content: center; }
   .sign p { font-size: 22px; line-height: 1.35; }
   .sign b { font-size: 26px; display: block; }
+
+
+  /* ---------- slide 6: video ---------- */
+  .s6 { display: flex; align-items: center; justify-content: center; padding-bottom: 28px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; border: 3px solid var(--green); background: var(--green-50); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -137,7 +143,7 @@
       <button class="back hidden" id="back" type="button" aria-label="Previous slide">
         <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <div class="dots" id="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="dots" id="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
     </div>
     <button class="restart" id="restart" type="button">↺ Start over</button>
   </div>
@@ -274,6 +280,13 @@
     </div>
   </section>
 
+  <!-- ================= Slide 6: habit loop video ================= -->
+  <section class="slide s6">
+    <div class="video auto">
+      <iframe id="clip" data-src="https://drive.google.com/file/d/1w-kYR1I1XtdO5yvrcrU3uyy7OzHIyLKU/preview" title="Habit loop video" allow="autoplay; fullscreen" allowfullscreen></iframe>
+    </div>
+  </section>
+
   <!-- forward arrow -->
   <button class="fwd" id="fwd" type="button" aria-label="Next slide">
     <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -357,6 +370,7 @@
   const fwd = document.getElementById('fwd');
   const back = document.getElementById('back');
   const hand = document.getElementById('hand');
+  const clip = document.getElementById('clip');
   let current = 0, handTimer, leverTimer;
 
   // on the slot-machine slide, the hand points at the lever until it's pulled once
@@ -378,6 +392,9 @@
     dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
     back.classList.toggle('hidden', current === 0);
     fwd.classList.toggle('hidden', current === slides.length - 1);
+    // load the video only on its slide, and unload it when leaving so it stops playing
+    if (current === slides.length - 1) { if (!clip.src) clip.src = clip.dataset.src; }
+    else if (clip.src) clip.removeAttribute('src');
     clearTimeout(leverTimer);
     slot.classList.remove('ready');
     if (current === 3 && pulls === 0) leverTimer = setTimeout(() => slot.classList.add('ready'), 1800);
@@ -392,7 +409,7 @@
   window.addEventListener('resize', fit);
 
   setReels([1, 2, 4], false);
-  // preview helper: open with #2 … #5 to start on that slide
+  // preview helper: open with #2 … #6 to start on that slide
   const start = parseInt(location.hash.slice(1), 10);
   go(start >= 1 && start <= slides.length ? start - 1 : 0);
 </script>
