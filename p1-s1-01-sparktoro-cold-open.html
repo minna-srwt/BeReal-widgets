@@ -17,75 +17,81 @@
   body { font-family: 'Inter', sans-serif; color: var(--black); }
   .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
 
-  /* 800x600 canvas, scaled to fit the embed */
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
   .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
 
   /* top bar */
-  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; z-index: 6; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft { display: flex; align-items: center; gap: 16px; }
   .dots { display: flex; gap: 8px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gray); transition: all .3s; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--gray); transition: all .3s; }
   .dot.done { background: var(--green-200); }
   .dot.now { background: var(--green); transform: scale(1.3); }
-  .restart { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; background: var(--white); border: 1.5px solid var(--gray); color: var(--black); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--gray); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
   .restart:hover { border-color: var(--green-dark); color: var(--green-dark); }
 
   /* slides */
-  .slide { position: absolute; top: 48px; left: 0; right: 0; bottom: 0; padding: 8px 40px 28px; opacity: 0; pointer-events: none; transform: translateX(30px); transition: opacity .5s ease, transform .5s ease; }
+  .slide { position: absolute; top: 60px; left: 0; right: 0; bottom: 0; padding: 4px 40px 28px; opacity: 0; pointer-events: none; transform: translateX(30px); transition: opacity .5s ease, transform .5s ease; }
   .slide.active { opacity: 1; pointer-events: auto; transform: none; }
   .slide.left { transform: translateX(-30px); }
 
   .auto { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
   .slide.active .auto { opacity: 1; transform: none; }
-  .d1 { transition-delay: .5s !important; } .d2 { transition-delay: 1.3s !important; } .d3 { transition-delay: 2.1s !important; } .d4 { transition-delay: 2.9s !important; }
+  .d1 { transition-delay: .5s !important; } .d2 { transition-delay: 1.3s !important; } .d3 { transition-delay: 2.1s !important; }
 
-  .hl { background: var(--green-50); box-shadow: inset 0 -4px 0 var(--green-200); padding: 0 3px; border-radius: 3px; }
+  .hl { background: var(--green-50); box-shadow: inset 0 -5px 0 var(--green-200); padding: 0 3px; border-radius: 3px; }
   a { color: var(--green-dark); font-weight: 600; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
   a:hover { color: var(--black); text-decoration-color: var(--green); }
   em.key { font-style: italic; font-weight: 700; color: var(--green-dark); }
 
   /* ---------- navigation ---------- */
-  .fwd { position: absolute; right: 28px; bottom: 24px; width: 76px; height: 76px; border-radius: 50%; border: none; background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--green-dark); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: none; background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--green-dark); }
   .fwd:hover { background: var(--green-dark); }
   .fwd:hover svg path { stroke: var(--white); }
-  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(8px); } }
-  .back { position: absolute; left: 28px; bottom: 30px; width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--gray); background: var(--white); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--gray); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
   .back:hover { border-color: var(--green-dark); }
   .hidden { opacity: 0 !important; pointer-events: none !important; }
-  .fwd:focus-visible, .back:focus-visible, .restart:focus-visible, .box:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 4px; }
+  .fwd:focus-visible, .back:focus-visible, .restart:focus-visible, .box:focus-visible, a:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 4px; }
 
   /* pointing hand that taps the thing to click */
-  .hand { position: absolute; width: 58px; height: 64px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: left .5s ease, top .5s ease, opacity .3s; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: left .5s ease, top .5s ease, opacity .3s; opacity: 0; }
+  #hand { right: 22px; bottom: 6px; }
+  .box-hand { right: 36px; bottom: 26px; transition: opacity .4s ease 2.6s; }
+  .slide.active .box-hand { opacity: 1; }
+  .box.open ~ .box-hand { opacity: 0 !important; transition-delay: 0s; }
   @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
 
   /* ---------- slide 1 ---------- */
-  .s1 { display: grid; grid-template-columns: 1.15fr 1fr; grid-template-rows: 1fr auto; column-gap: 32px; row-gap: 14px; }
-  .s1 .intro { font-size: 22px; line-height: 1.55; align-self: center; }
-  .s1 .right { display: flex; flex-direction: column; gap: 14px; justify-content: center; }
-  .chart { background: var(--green-50); border: 1.5px solid var(--gray); border-radius: 14px; padding: 12px 16px 10px; }
-  .chart .lbl { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--green-dark); }
-  .chart .say { font-size: 22px; font-weight: 700; margin-top: 4px; }
-  .chart path.line { stroke-dasharray: 420; stroke-dashoffset: 420; }
+  .s1 { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; }
+  .s1 .intro { font-size: 26px; line-height: 1.48; }
+  .s1 .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .chart { background: var(--green-50); border: 1.5px solid var(--gray); border-radius: 16px; padding: 12px 18px 12px; }
+  .chart .lbl { font-size: 13px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--green-dark); }
+  .chart svg { display: block; width: 100%; height: 54px; margin-top: 2px; }
+  .chart .say { font-size: 25px; font-weight: 700; margin-top: 4px; }
+  .chart path.line { stroke-dasharray: 520; stroke-dashoffset: 520; }
   .slide.active .chart path.line { animation: draw 1.6s ease forwards; }
   .slide.active .c2 path.line { animation-delay: 1.3s; }
   @keyframes draw { to { stroke-dashoffset: 0; } }
-  .s1 .signal { grid-column: 1 / -1; font-size: 28px; line-height: 1.3; padding-right: 100px; }
+  .s1 .signal { font-size: 36px; line-height: 1.2; padding-right: 120px; }
 
   /* ---------- slide 2 ---------- */
-  .s2 { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: auto 1fr auto; column-gap: 28px; row-gap: 10px; }
-  .s2 .except { grid-column: 1 / -1; font-size: 62px; line-height: 1.05; }
-  .s2 .why { font-size: 23px; line-height: 1.5; align-self: center; }
-  .s2 .funnel { align-self: center; justify-self: center; }
+  .s2 { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
+  .s2 .except { font-size: 84px; line-height: 1; }
+  .s2 .mid { display: grid; grid-template-columns: 1fr auto; gap: 36px; align-items: center; }
+  .s2 .why { font-size: 30px; line-height: 1.42; }
   .faller { opacity: 0; }
   .slide.active .faller { animation: fall 2.8s ease-in infinite; }
   @keyframes fall { 0% { opacity: 0; transform: translateY(0); } 10% { opacity: 1; } 55% { opacity: 1; transform: translateY(80px); } 100% { opacity: 0; transform: translate(var(--dx), 104px); } }
   .keeper { opacity: 0; }
   .slide.active .keeper { animation: keep 2.8s ease-in infinite; animation-delay: 1s; }
   @keyframes keep { 0% { opacity: 0; transform: translateY(0); } 10% { opacity: 1; } 100% { opacity: 1; transform: translateY(166px); } }
-  .s2 .notfix { grid-column: 1 / -1; display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; align-items: center; padding-right: 96px; }
-  .s2 .notfix p { font-size: 21px; line-height: 1.45; font-weight: 600; }
-  .fixes { display: flex; gap: 10px; }
-  .fix { flex: 1; border: 2px solid var(--gray); border-radius: 12px; padding: 8px 4px; text-align: center; font-size: 12px; font-weight: 600; position: relative; background: var(--white); }
-  .fix svg { display: block; margin: 0 auto 4px; }
+  .s2 .notfix { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: center; padding-right: 116px; }
+  .s2 .notfix p { font-size: 25px; line-height: 1.38; font-weight: 600; }
+  .fixes { display: flex; gap: 12px; }
+  .fix { flex: 1; border: 2px solid var(--gray); border-radius: 14px; padding: 10px 4px; text-align: center; font-size: 15px; font-weight: 600; position: relative; background: var(--white); }
+  .fix svg { display: block; margin: 0 auto 6px; }
   .fix::after { content: ""; position: absolute; left: 6px; right: 6px; top: 50%; height: 4px; background: var(--black); border-radius: 2px; transform: scaleX(0) rotate(-14deg); transition: transform .4s ease; }
   .slide.active .fix::after { transform: scaleX(1) rotate(-14deg); }
   .slide.active .fix { background: var(--gray); transition: background .4s; }
@@ -94,24 +100,25 @@
   .slide.active .f3::after, .slide.active .f3 { transition-delay: 3.2s; }
 
   /* ---------- slide 3 ---------- */
-  .s3 { display: grid; grid-template-columns: 220px 1fr; grid-template-rows: auto 1fr; column-gap: 30px; row-gap: 18px; }
-  .s3 .team { grid-column: 1 / -1; font-size: 25px; line-height: 1.5; }
-  .bars { align-self: center; }
+  .s3 { display: flex; flex-direction: column; gap: 18px; }
+  .s3 .team { font-size: 29px; line-height: 1.45; }
+  .s3 .row { flex: 1; display: grid; grid-template-columns: 1fr 200px; gap: 28px; min-height: 0; }
+  .bars { align-self: end; }
   .bars rect.grow { transform-origin: bottom; transform-box: fill-box; transform: scaleY(.5); transition: transform 1.4s ease 1.4s; }
   .slide.active .bars rect.grow { transform: scaleY(1); }
   .bars .twice { opacity: 0; transition: opacity .5s ease 2.8s; }
   .slide.active .bars .twice { opacity: 1; }
-  .boxwrap { perspective: 1200px; align-self: stretch; margin-bottom: 4px; }
-  .box { width: 100%; height: 100%; min-height: 230px; position: relative; border: none; background: none; cursor: pointer; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
+  .boxwrap { perspective: 1400px; position: relative; }
+  .box { width: 100%; height: 100%; position: relative; border: none; background: none; cursor: pointer; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2,.8,.2,1); font: inherit; color: inherit; }
   .box.open { transform: rotateY(180deg); cursor: default; }
-  .face { position: absolute; inset: 0; border-radius: 18px; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; }
-  .front { background: var(--green-50); border: 3px dashed var(--green-dark); font-family: 'DM Serif Text', serif; font-size: 120px; color: var(--green-dark); }
+  .face { position: absolute; inset: 0; border-radius: 20px; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; }
+  .front { background: var(--green-50); border: 3px dashed var(--green-dark); font-family: 'DM Serif Text', serif; font-size: 150px; color: var(--green-dark); }
   .box:not(.open) .front { animation: wobble 2.2s ease-in-out infinite; }
   .box:not(.open):hover .front { background: var(--green-200); }
-  @keyframes wobble { 0%,40%,100% { transform: rotate(0); } 47% { transform: rotate(-2deg); } 54% { transform: rotate(2deg); } 60% { transform: rotate(0); } }
-  .back-face { transform: rotateY(180deg); background: var(--white); border: 3px solid var(--green); flex-direction: column; gap: 16px; padding: 24px 30px; text-align: center; }
-  .back-face h2 { font-size: 31px; line-height: 1.25; }
-  .back-face .bar { width: 70px; height: 5px; background: var(--green); border-radius: 3px; }
+  @keyframes wobble { 0%,40%,100% { transform: rotate(0); } 47% { transform: rotate(-1.5deg); } 54% { transform: rotate(1.5deg); } 60% { transform: rotate(0); } }
+  .back-face { transform: rotateY(180deg); background: var(--white); border: 3px solid var(--green); flex-direction: column; gap: 18px; padding: 24px 40px; text-align: center; }
+  .back-face h2 { font-size: 38px; line-height: 1.22; }
+  .back-face .bar { width: 80px; height: 6px; background: var(--green); border-radius: 3px; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -123,27 +130,32 @@
 <div class="canvas" id="canvas">
 
   <div class="topbar">
-    <div class="dots" id="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
     <button class="restart" id="restart" type="button">↺ Start over</button>
   </div>
 
   <!-- ================= Slide 1 ================= -->
   <section class="slide s1 active" aria-live="polite">
     <p class="intro auto">A few years ago, a startup called <a href="https://sparktoro.com/" target="_blank" rel="noopener">SparkToro</a> launched with everything going for it. SparkToro is an <strong class="hl">audience research tool that helps marketers figure out who their customers really are</strong> and where to find them — built by <a href="https://medium.com/@randfish" target="_blank" rel="noopener">Rand Fishkin</a>, best known for co-founding <a href="https://moz.com/" target="_blank" rel="noopener">Moz</a>, one of the biggest names in SEO. People paid attention.</p>
-    <div class="right">
+    <div class="charts">
       <div class="chart c1 auto d1">
         <div class="lbl">Traffic</div>
-        <svg viewBox="0 0 300 70" width="100%" height="66" aria-hidden="true">
-          <line x1="0" y1="66" x2="300" y2="66" stroke="#E4E4E4" stroke-width="2"/>
-          <path class="line" d="M0 60 L40 54 L80 56 L120 44 L160 39 L200 28 L240 22 L292 8" fill="none" stroke="#07A657" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg viewBox="0 0 400 54" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" y1="52" x2="400" y2="52" stroke="#E4E4E4" stroke-width="2"/>
+          <path class="line" d="M0 48 L55 43 L110 45 L165 35 L220 31 L275 22 L330 17 L392 5" fill="none" stroke="#07A657" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <div class="say">Traffic was healthy.</div>
       </div>
       <div class="chart c2 auto d2">
         <div class="lbl">Signups</div>
-        <svg viewBox="0 0 300 70" width="100%" height="66" aria-hidden="true">
-          <line x1="0" y1="66" x2="300" y2="66" stroke="#E4E4E4" stroke-width="2"/>
-          <path class="line" d="M0 62 L40 57 L80 50 L120 48 L160 36 L200 31 L240 18 L292 9" fill="none" stroke="#07A657" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg viewBox="0 0 400 54" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" y1="52" x2="400" y2="52" stroke="#E4E4E4" stroke-width="2"/>
+          <path class="line" d="M0 49 L55 45 L110 39 L165 37 L220 28 L275 24 L330 13 L392 6" fill="none" stroke="#07A657" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <div class="say">Signups were healthy.</div>
       </div>
@@ -154,29 +166,31 @@
   <!-- ================= Slide 2 ================= -->
   <section class="slide s2">
     <div class="except serif auto"><strong>Except it wasn't.</strong></div>
-    <p class="why auto d1">People who signed up for the free version weren't sticking around to pay for it — and nobody on the team could say exactly <em class="key">why.</em></p>
-    <svg class="funnel auto d1" viewBox="0 0 250 230" width="250" height="230" aria-hidden="true">
-      <rect x="10" y="4" width="230" height="46" rx="12" fill="#ECFDF1" stroke="#07A657" stroke-width="2"/>
-      <text x="125" y="33" text-anchor="middle" font-family="Inter" font-size="16" font-weight="700" fill="#07A657">free</text>
-      <path d="M30 58 L220 58 L152 166 L98 166 Z" fill="none" stroke="#E4E4E4" stroke-width="2.5"/>
-      <rect x="75" y="176" width="100" height="46" rx="12" fill="#FFFFFF" stroke="#000" stroke-width="2"/>
-      <text x="125" y="205" text-anchor="middle" font-family="Inter" font-size="16" font-weight="700" fill="#000">pay</text>
-      <g fill="#000">
-        <circle class="faller" cx="52" cy="62" r="6" style="--dx:-44px; animation-delay:0s"/>
-        <circle class="faller" cx="84" cy="62" r="6" style="--dx:-34px; animation-delay:.45s"/>
-        <circle class="faller" cx="160" cy="62" r="6" style="--dx:38px; animation-delay:.2s"/>
-        <circle class="faller" cx="196" cy="62" r="6" style="--dx:48px; animation-delay:.8s"/>
-        <circle class="faller" cx="106" cy="62" r="6" style="--dx:-50px; animation-delay:1.3s"/>
-        <circle class="faller" cx="142" cy="62" r="6" style="--dx:44px; animation-delay:1.7s"/>
-      </g>
-      <circle class="keeper" cx="125" cy="62" r="6" fill="#18DD4C"/>
-    </svg>
+    <div class="mid">
+      <p class="why auto d1">People who signed up for the free version weren't sticking around to pay for it — and nobody on the team could say exactly <em class="key">why.</em></p>
+      <svg class="funnel auto d1" viewBox="0 0 250 230" width="270" height="248" aria-hidden="true">
+        <rect x="10" y="4" width="230" height="46" rx="12" fill="#ECFDF1" stroke="#07A657" stroke-width="2"/>
+        <text x="125" y="33" text-anchor="middle" font-family="Inter" font-size="17" font-weight="700" fill="#07A657">free</text>
+        <path d="M30 58 L220 58 L152 166 L98 166 Z" fill="none" stroke="#E4E4E4" stroke-width="2.5"/>
+        <rect x="75" y="176" width="100" height="46" rx="12" fill="#FFFFFF" stroke="#000" stroke-width="2"/>
+        <text x="125" y="205" text-anchor="middle" font-family="Inter" font-size="17" font-weight="700" fill="#000">pay</text>
+        <g fill="#000">
+          <circle class="faller" cx="52" cy="62" r="6" style="--dx:-44px; animation-delay:0s"/>
+          <circle class="faller" cx="84" cy="62" r="6" style="--dx:-34px; animation-delay:.45s"/>
+          <circle class="faller" cx="160" cy="62" r="6" style="--dx:38px; animation-delay:.2s"/>
+          <circle class="faller" cx="196" cy="62" r="6" style="--dx:48px; animation-delay:.8s"/>
+          <circle class="faller" cx="106" cy="62" r="6" style="--dx:-50px; animation-delay:1.3s"/>
+          <circle class="faller" cx="142" cy="62" r="6" style="--dx:44px; animation-delay:1.7s"/>
+        </g>
+        <circle class="keeper" cx="125" cy="62" r="6" fill="#18DD4C"/>
+      </svg>
+    </div>
     <div class="notfix auto d2">
       <p>They didn't fix it with more ads, a slicker signup flow, or a redesign.</p>
       <div class="fixes" aria-hidden="true">
-        <div class="fix f1"><svg width="34" height="28" viewBox="0 0 52 44"><path d="M6 16 L28 6 L28 38 L6 28 Z" fill="#ECFDF1" stroke="#000" stroke-width="3" stroke-linejoin="round"/><path d="M34 14 q8 8 0 16 M40 9 q14 13 0 26" fill="none" stroke="#07A657" stroke-width="3" stroke-linecap="round"/></svg>ads</div>
-        <div class="fix f2"><svg width="34" height="28" viewBox="0 0 52 44"><rect x="8" y="3" width="36" height="38" rx="5" fill="#ECFDF1" stroke="#000" stroke-width="3"/><line x1="15" y1="13" x2="37" y2="13" stroke="#000" stroke-width="3"/><line x1="15" y1="21" x2="37" y2="21" stroke="#000" stroke-width="3"/><rect x="15" y="28" width="22" height="7" rx="3.5" fill="#18DD4C"/></svg>signup flow</div>
-        <div class="fix f3"><svg width="34" height="28" viewBox="0 0 52 44"><path d="M30 4 L44 18 L22 40 L8 40 L8 26 Z" fill="#ECFDF1" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="24" y1="10" x2="38" y2="24" stroke="#07A657" stroke-width="3"/></svg>redesign</div>
+        <div class="fix f1"><svg width="44" height="36" viewBox="0 0 52 44"><path d="M6 16 L28 6 L28 38 L6 28 Z" fill="#ECFDF1" stroke="#000" stroke-width="3" stroke-linejoin="round"/><path d="M34 14 q8 8 0 16 M40 9 q14 13 0 26" fill="none" stroke="#07A657" stroke-width="3" stroke-linecap="round"/></svg>ads</div>
+        <div class="fix f2"><svg width="44" height="36" viewBox="0 0 52 44"><rect x="8" y="3" width="36" height="38" rx="5" fill="#ECFDF1" stroke="#000" stroke-width="3"/><line x1="15" y1="13" x2="37" y2="13" stroke="#000" stroke-width="3"/><line x1="15" y1="21" x2="37" y2="21" stroke="#000" stroke-width="3"/><rect x="15" y="28" width="22" height="7" rx="3.5" fill="#18DD4C"/></svg>signup flow</div>
+        <div class="fix f3"><svg width="44" height="36" viewBox="0 0 52 44"><path d="M30 4 L44 18 L22 40 L8 40 L8 26 Z" fill="#ECFDF1" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="24" y1="10" x2="38" y2="24" stroke="#07A657" stroke-width="3"/></svg>redesign</div>
       </div>
     </div>
   </section>
@@ -184,29 +198,34 @@
   <!-- ================= Slide 3 ================= -->
   <section class="slide s3">
     <p class="team auto">The team went looking for the answer in an <em class="key">unexpected place</em> — and what they found there doubled the number of people who converted to paying customers, the ones who decided to stick with the product.</p>
-    <svg class="bars auto d1" viewBox="0 0 220 230" width="220" height="230" role="img" aria-label="A bar that doubles in height">
-      <line x1="10" y1="220" x2="210" y2="220" stroke="#E4E4E4" stroke-width="2"/>
-      <rect x="36" y="150" width="58" height="70" rx="8" fill="#E4E4E4"/>
-      <rect class="grow" x="126" y="80" width="58" height="140" rx="8" fill="#18DD4C"/>
-      <text class="twice" x="155" y="66" text-anchor="middle" font-family="DM Serif Text" font-size="30" fill="#07A657">×2</text>
-    </svg>
-    <div class="boxwrap auto d2">
-      <button class="box" id="box" type="button" aria-label="Open the mystery box">
-        <div class="face front">?</div>
-        <div class="face back-face">
-          <div class="bar"></div>
-          <h2 class="serif">Hang onto that. The answer is coming later in this project — and it's not what you'd expect.</h2>
-        </div>
-      </button>
+    <div class="row">
+      <div class="boxwrap auto d2">
+        <button class="box" id="box" type="button" aria-label="Open the mystery box">
+          <div class="face front">?</div>
+          <div class="face back-face">
+            <div class="bar"></div>
+            <h2 class="serif">Hang onto that. The answer is coming later in this project — and it's not what you'd expect.</h2>
+          </div>
+        </button>
+        <svg class="hand box-hand" id="boxHand" viewBox="0 0 58 64" aria-hidden="true">
+    <path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+    <line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/>
+    <line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/>
+    <line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/>
+  </svg>
+      </div>
+      <svg class="bars auto d1" viewBox="0 0 200 240" width="200" height="240" role="img" aria-label="A bar that doubles in height">
+        <line x1="6" y1="232" x2="194" y2="232" stroke="#E4E4E4" stroke-width="2"/>
+        <rect x="20" y="152" width="66" height="80" rx="8" fill="#E4E4E4"/>
+        <rect class="grow" x="114" y="72" width="66" height="160" rx="8" fill="#18DD4C"/>
+        <text class="twice" x="147" y="56" text-anchor="middle" font-family="DM Serif Text" font-size="36" fill="#07A657">×2</text>
+      </svg>
     </div>
   </section>
 
-  <!-- navigation -->
-  <button class="back hidden" id="back" type="button" aria-label="Previous slide">
-    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
+  <!-- forward arrow -->
   <button class="fwd" id="fwd" type="button" aria-label="Next slide">
-    <svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
 
   <!-- pointing hand cue -->
@@ -219,14 +238,17 @@
 </div>
 
 <script>
-  // scale the 800x600 canvas to fit the embed
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
   const canvas = document.getElementById('canvas');
+  let scale = 1;
   function fit() {
     const w = window.innerWidth, h = window.innerHeight;
-    const s = Math.min(w / 800, h / 600);
-    canvas.style.transform = `translate(${(w - 800 * s) / 2}px, ${(h - 600 * s) / 2}px) scale(${s})`;
+    scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
   }
-  window.addEventListener('resize', fit); fit();
+  fit();
 
   const slides = [...document.querySelectorAll('.slide')];
   const dots = [...document.querySelectorAll('.dot')];
@@ -234,20 +256,10 @@
   const back = document.getElementById('back');
   const hand = document.getElementById('hand');
   const box = document.getElementById('box');
-  let current = 0;
+  let current = 0, handTimer;
 
-  function placeHand() {
-    if (current < 2) {
-      hand.style.left = '736px'; hand.style.top = '548px'; hand.style.opacity = 1;
-    } else if (!box.classList.contains('open')) {
-      const r = box.getBoundingClientRect(), c = canvas.getBoundingClientRect(), s = c.width / 800;
-      hand.style.left = ((r.right - c.left) / s - 70) + 'px';
-      hand.style.top = ((r.bottom - c.top) / s - 50) + 'px';
-      hand.style.opacity = 1;
-    } else {
-      hand.style.opacity = 0;
-    }
-  }
+  // the hand taps the forward arrow; on the last slide a second hand (inside the box) takes over
+  function placeHand() { hand.style.opacity = current < slides.length - 1 ? 1 : 0; }
 
   function go(to) {
     slides.forEach((s, i) => {
@@ -260,16 +272,19 @@
     back.classList.toggle('hidden', current === 0);
     fwd.classList.toggle('hidden', current === slides.length - 1);
     hand.style.opacity = 0;
-    setTimeout(placeHand, current === 2 ? 2600 : 900);
+    clearTimeout(handTimer);
+    handTimer = setTimeout(placeHand, 1800);
   }
 
   fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
   back.addEventListener('click', () => { if (current > 0) go(current - 1); });
-  box.addEventListener('click', () => { box.classList.add('open'); placeHand(); });
+  box.addEventListener('click', () => box.classList.add('open'));
   document.getElementById('restart').addEventListener('click', () => { box.classList.remove('open'); go(0); });
-  window.addEventListener('resize', placeHand);
+  window.addEventListener('resize', fit);
 
-  go(0);
+  // preview helper: open with #2 or #3 to start on that slide
+  const start = parseInt(location.hash.slice(1), 10);
+  go(start >= 1 && start <= slides.length ? start - 1 : 0);
 </script>
 </body>
 </html>
