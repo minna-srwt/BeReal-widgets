@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Wall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000; --white: #FFFFFF; --gray: #E4E4E4;
+    --green: #18DD4C; --green-dark: #07A657; --green-50: #ECFDF1; --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+
+  /* top bar */
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft { display: flex; align-items: center; gap: 16px; }
+  .dots { display: flex; gap: 8px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--green-200); }
+  .dot.now { background: var(--green); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { border-color: var(--green-dark); color: var(--green-dark); }
+
+  /* slides fill the whole canvas so full-bleed backgrounds work; content sits below the top bar */
+  .slide { position: absolute; inset: 0; padding: 66px 40px 28px; opacity: 0; pointer-events: none; transition: opacity .6s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+
+  .auto { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .6s !important; } .d2 { transition-delay: 1.3s !important; } .d3 { transition-delay: 2s !important; }
+
+  /* ---------- navigation ---------- */
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); }
+  .fwd:hover { background: var(--green-dark); }
+  .fwd:hover svg path { stroke: var(--white); }
+  /* on a mid-green wall the arrow flips to black with a white ring so it still pops */
+  .fwd.on-green { background: var(--black); box-shadow: 0 0 0 5px var(--white), 0 8px 0 5px var(--white); }
+  .fwd.on-green svg path { stroke: var(--green); }
+  .fwd.on-green:hover { background: var(--green-dark); }
+  .fwd.on-green:hover svg path { stroke: var(--white); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { border-color: var(--green-dark); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  .fwd:focus-visible, .back:focus-visible, .restart:focus-visible, .pov:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 4px; }
+
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; }
+  #hand { right: 22px; bottom: 6px; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+
+  /* taped paper sheet (shared by slides 1 and 5) */
+  .sheet { position: relative; background: var(--white); border: 2.5px solid var(--black); border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 22px 8px 10px; box-shadow: 4px 5px 0 rgba(0,0,0,.12); }
+  .sheet::before { content: ""; position: absolute; top: -12px; left: 50%; width: 46px; height: 20px; margin-left: -23px; background: var(--green-50); border: 2px solid var(--black); transform: rotate(-4deg); opacity: .95; }
+  .sheet svg.sketch { width: 100%; height: auto; max-height: 90px; }
+  .sheet .mood { width: 100%; height: auto; max-height: 34px; }
+
+  /* ---------- slide 1: the wall ---------- */
+  .s1 { background: var(--green-200); display: flex; flex-direction: column; justify-content: center; gap: 44px; padding-bottom: 110px; }
+  .s1 .hook { font-size: 48px; line-height: 1.12; }
+  .row { display: flex; gap: 16px; padding-right: 104px; }
+  .row .sheet { flex: 1; height: 190px; opacity: 0; transform: translateY(-24px) rotate(var(--r)); transition: opacity .35s ease, transform .45s cubic-bezier(.3,1.5,.5,1); }
+  .slide.active .row .sheet { opacity: 1; transform: rotate(var(--r)); }
+  .string { position: absolute; left: 0; right: 0; height: 3px; background: var(--black); opacity: .25; }
+
+  /* ---------- slide 2: video ---------- */
+  .s2 { display: flex; align-items: center; justify-content: center; padding-bottom: 28px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--green-50); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  /* ---------- slide 3: storyboard panel ---------- */
+  .s3 { background: var(--green-50); display: flex; align-items: center; justify-content: center; padding: 70px 40px 112px; }
+  .panel { position: relative; width: 100%; max-width: 1000px; background: var(--white); border: 4px solid var(--black); border-radius: 6px; padding: 26px 34px 28px; box-shadow: 10px 10px 0 var(--green-200); }
+  .panel .thumbs { display: flex; gap: 12px; margin-bottom: 18px; }
+  .panel .thumb { flex: 1; height: 62px; border: 2px solid var(--black); border-radius: 3px; background: var(--green-50); display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(.8); transition: opacity .3s ease, transform .4s cubic-bezier(.3,1.5,.5,1); }
+  .slide.active .panel .thumb { opacity: 1; transform: none; }
+  .panel p { font-size: 25px; line-height: 1.5; }
+  .panel .pin { position: absolute; top: -20px; left: -16px; font-size: 34px; transform: rotate(-12deg); }
+  .pencil { position: absolute; right: -30px; top: -26px; transform: rotate(25deg); }
+
+  /* ---------- slide 4: the point of view ---------- */
+  .s4 { display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-bottom: 50px; }
+  .s4 .craft { font-size: 38px; line-height: 1.15; }
+  .flip { perspective: 1400px; height: 120px; }
+  .pov { position: relative; width: 100%; height: 100%; border: none; background: none; cursor: pointer; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2,.8,.2,1); font: inherit; color: inherit; }
+  .pov.open { transform: rotateX(180deg); cursor: default; }
+  .face { position: absolute; inset: 0; border-radius: 18px; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; gap: 22px; }
+  .face.front { background: var(--green-50); border: 3px dashed var(--green-dark); font-family: 'DM Serif Text', serif; font-size: 76px; color: var(--green-dark); }
+  .pov:not(.open) .face.front { animation: wobble 2.2s ease-in-out infinite; }
+  .pov:not(.open):hover .face.front { background: var(--green-200); }
+  @keyframes wobble { 0%,40%,100% { transform: rotate(0); } 47% { transform: rotate(-.8deg); } 54% { transform: rotate(.8deg); } 60% { transform: rotate(0); } }
+  .face.back-face { transform: rotateX(180deg); background: var(--green); border: 3px solid var(--black); }
+  .face.back-face b { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 54px; }
+  .after { display: flex; flex-direction: column; gap: 12px; }
+  .after p { font-size: 24px; line-height: 1.45; opacity: 0; transform: translateY(10px); transition: opacity .6s ease, transform .6s ease; padding-right: 110px; }
+  .after p b { color: var(--green-dark); }
+  .s4.revealed .after p { opacity: 1; transform: none; }
+  .s4.revealed .after p:nth-child(1) { transition-delay: .7s; }
+  .s4.revealed .after p:nth-child(2) { transition-delay: 1.5s; }
+  .phand { right: 30px; bottom: -6px; transition: opacity .4s ease 1.8s; }
+  .slide.active .phand { opacity: 1; }
+  .pov.open .phand { opacity: 0 !important; transition-delay: 0s; }
+
+  /* ---------- slide 5: funnel out, wall in ---------- */
+  .s5 { display: flex; flex-direction: column; justify-content: center; gap: 22px; padding-bottom: 40px; }
+  .swap { display: grid; grid-template-columns: 150px 70px 1fr; align-items: center; gap: 16px; height: 150px; }
+  .funnel .x { stroke-dasharray: 130; stroke-dashoffset: 130; }
+  .slide.active .funnel .x { animation: strike .5s ease-out 1s forwards; }
+  @keyframes strike { to { stroke-dashoffset: 0; } }
+  .slide.active .funnel .body { opacity: .35; transition: opacity .5s ease 1.4s; }
+  .mini { display: flex; gap: 10px; height: 120px; }
+  .mini .sheet { flex: 1; padding: 16px 4px 6px; opacity: 0; transform: translateY(-16px) rotate(var(--r)); transition: opacity .3s ease, transform .4s cubic-bezier(.3,1.5,.5,1); }
+  .mini .sheet::before { width: 30px; height: 14px; margin-left: -15px; top: -9px; }
+  .slide.active .mini .sheet { opacity: 1; transform: rotate(var(--r)); }
+  .s5 p { font-size: 25px; line-height: 1.45; }
+  .s5 .close { font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .funnel .x { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
+    <button class="restart" id="restart" type="button">↺ Start over</button>
+  </div>
+
+  <!-- ================= Slide 1: the wall ================= -->
+  <section class="slide s1 active" data-bg="green" aria-live="polite">
+    <p class="hook serif auto">That's where she found it: sheets of paper taped to the wall in a row, mapping out an Airbnb customer's entire journey — a host, a guest, start to finish.</p>
+    <div class="row" id="row" role="img" aria-label="Six storyboard sheets taped to a wall, following one trip from start to finish"></div>
+  </section>
+
+  <!-- ================= Slide 2: the clip ================= -->
+  <section class="slide s2">
+    <div class="video auto">
+      <iframe id="clip" data-src="https://www.youtube.com/embed/0FgZ1VVxEBo?start=843&end=1156" title="Customer-led growth | Georgiana Laudi — the Airbnb wall" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    </div>
+  </section>
+
+  <!-- ================= Slide 3: Project Snow White ================= -->
+  <section class="slide s3">
+    <div class="panel auto">
+      <span class="pin" aria-hidden="true">📌</span>
+      <div class="thumbs" id="thumbs" aria-hidden="true"></div>
+      <p>Internally, the team called it <strong>Project Snow White</strong>, after the Walt Disney biography that inspired it: Disney's team had to invent the storyboard just to make <em>Snow White</em> work, because the film was too complex to hold in anyone's head at once. Airbnb hired an actual Pixar storyboard artist to draw the keyframes of a customer's trip the same way.</p>
+      <svg class="pencil" width="140" height="26" viewBox="0 0 140 26" aria-hidden="true"><rect x="2" y="3" width="104" height="20" rx="3" fill="#18DD4C" stroke="#000" stroke-width="2.5"/><rect x="2" y="3" width="16" height="20" fill="#E4E4E4" stroke="#000" stroke-width="2.5"/><path d="M106 3 L136 13 L106 23 Z" fill="#FFFFFF" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/><path d="M128 10 L136 13 L128 16 Z" fill="#000"/></svg>
+    </div>
+  </section>
+
+  <!-- ================= Slide 4: the point of view ================= -->
+  <section class="slide s4" id="s4">
+    <p class="craft serif auto">What stopped Gia in her tracks wasn't the craft.</p>
+    <div class="flip auto d1">
+      <button class="pov" id="pov" type="button" aria-label="Reveal what stopped Gia">
+        <span class="face front">?</span>
+        <span class="face back-face">
+          <svg width="74" height="46" viewBox="0 0 74 46" aria-hidden="true"><path d="M4 23 Q37 -6 70 23 Q37 52 4 23 Z" fill="#FFFFFF" stroke="#000" stroke-width="3.5"/><circle cx="37" cy="23" r="11" fill="#ECFDF1" stroke="#000" stroke-width="3"/><circle cx="37" cy="23" r="4.5" fill="#000"/></svg>
+          <b>It was the point of view.</b>
+        </span>
+        <svg class="hand phand" viewBox="0 0 58 64" aria-hidden="true">
+          <path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+          <line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/>
+        </svg>
+      </button>
+    </div>
+    <div class="after">
+      <p>The wall didn't track signups or conversion rates — it tracked what a real person felt at each step, including the parts of their life that had nothing to do with Airbnb at all.</p>
+      <p>Every milestone was legible at a glance: <b>what the customer was trying to do, and what they needed to feel to keep going.</b></p>
+    </div>
+  </section>
+
+  <!-- ================= Slide 5: funnel out, wall in ================= -->
+  <section class="slide s5">
+    <div class="swap auto" role="img" aria-label="A crossed-out funnel, then a wall of storyboard sheets">
+      <svg class="funnel" viewBox="0 0 150 140" width="150" height="140">
+        <path class="body" d="M10 14 H140 L92 74 V128 L58 116 V74 Z" fill="#E4E4E4" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+        <path class="x" d="M14 10 L136 132 M136 10 L14 132" stroke="#000" stroke-width="7" stroke-linecap="round"/>
+      </svg>
+      <svg viewBox="0 0 70 30" width="70" height="30" aria-hidden="true"><path d="M4 15 H60 M48 4 L62 15 L48 26" fill="none" stroke="#07A657" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="mini" id="mini"></div>
+    </div>
+    <p class="auto d1">It was the complete opposite of the funnel thinking she already found gross. This was value to the customer, mapped in full view — not value to the business, buried in a spreadsheet.</p>
+    <p class="close auto d2">She went back to her own office and, with her team, spent two days locked in a room building their own version. That wall is a big part of why Forget the Funnel exists at all.</p>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true">
+    <path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+    <line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/>
+  </svg>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+
+  // six keyframes of one trip: host's home, browsing, packing, arriving, the stay, the memory after
+  const SKETCH = [
+    '<path d="M10 46 L40 20 L70 46 V78 H10 Z" fill="#ECFDF1" stroke="#000" stroke-width="3" stroke-linejoin="round"/><rect x="33" y="54" width="14" height="24" fill="#18DD4C" stroke="#000" stroke-width="2.5"/>',
+    '<rect x="22" y="12" width="36" height="64" rx="7" fill="#FFFFFF" stroke="#000" stroke-width="3"/><rect x="28" y="22" width="24" height="16" rx="2" fill="#B5F7C9" stroke="#000" stroke-width="2"/><rect x="28" y="44" width="24" height="16" rx="2" fill="#ECFDF1" stroke="#000" stroke-width="2"/>',
+    '<rect x="14" y="32" width="52" height="40" rx="6" fill="#B5F7C9" stroke="#000" stroke-width="3"/><path d="M30 32 V24 H50 V32" fill="none" stroke="#000" stroke-width="3"/><line x1="14" y1="48" x2="66" y2="48" stroke="#000" stroke-width="2.5"/>',
+    '<rect x="22" y="14" width="36" height="62" rx="2" fill="#FFFFFF" stroke="#000" stroke-width="3"/><circle cx="50" cy="46" r="3.5" fill="#000"/><path d="M60 40 h12 m-4 -4 l4 4 -4 4" fill="none" stroke="#07A657" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+    '<rect x="10" y="44" width="60" height="22" rx="4" fill="#ECFDF1" stroke="#000" stroke-width="3"/><rect x="14" y="36" width="20" height="12" rx="4" fill="#FFFFFF" stroke="#000" stroke-width="2.5"/><line x1="12" y1="66" x2="12" y2="76" stroke="#000" stroke-width="3"/><line x1="68" y1="66" x2="68" y2="76" stroke="#000" stroke-width="3"/>',
+    '<path d="M40 70 L18 48 a12 12 0 0 1 22 -16 a12 12 0 0 1 22 16 z" fill="#18DD4C" stroke="#000" stroke-width="3" stroke-linejoin="round"/>'
+  ];
+  // what the person felt at each step (the point of view the wall tracked)
+  const MOOD = ['M10 22 q14 8 28 0', 'M10 20 h28', 'M10 26 q14 -8 28 0', 'M10 22 q14 8 28 0', 'M10 22 q14 10 28 0', 'M8 20 q16 12 32 0'];
+  function sheetHTML(i, rot, withMood) {
+    return `<div class="sheet" style="--r:${rot}deg;transition-delay:${0.5 + i * 0.35}s">` +
+      `<svg class="sketch" viewBox="0 0 80 84">${SKETCH[i]}</svg>` +
+      (withMood ? `<svg class="mood" viewBox="0 0 48 34"><circle cx="24" cy="17" r="15" fill="#FFFFFF" stroke="#000" stroke-width="2.5"/><circle cx="18" cy="13" r="2" fill="#000"/><circle cx="30" cy="13" r="2" fill="#000"/><path d="${MOOD[i].replace(/(\d+)/g, (n, _, off) => n)}" transform="translate(0,1) scale(1)" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/></svg>` : '') +
+      `</div>`;
+  }
+  const ROT = [-2, 1.5, -1, 2, -1.5, 1];
+  document.getElementById('row').innerHTML = SKETCH.map((_, i) => sheetHTML(i, ROT[i], true)).join('');
+  document.getElementById('mini').innerHTML = SKETCH.map((_, i) => sheetHTML(i, ROT[(i + 2) % 6], false).replace(`${0.5 + i * 0.35}s`, `${1.6 + i * 0.2}s`)).join('');
+  document.getElementById('thumbs').innerHTML = [0, 2, 3, 5].map((k, i) =>
+    `<div class="thumb" style="transition-delay:${0.5 + i * 0.25}s"><svg width="48" height="50" viewBox="0 0 80 84">${SKETCH[k]}</svg></div>`).join('');
+
+  const slides = [...document.querySelectorAll('.slide')];
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd');
+  const back = document.getElementById('back');
+  const hand = document.getElementById('hand');
+  const clip = document.getElementById('clip');
+  const pov = document.getElementById('pov');
+  const s4 = document.getElementById('s4');
+  const POV_SLIDE = 3;
+  let current = 0, handTimer;
+
+  function showFwd() {
+    const locked = current === POV_SLIDE && !pov.classList.contains('open');
+    fwd.classList.toggle('hidden', current === slides.length - 1 || locked);
+    fwd.classList.toggle('on-green', slides[current].dataset.bg === 'green');
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1 && !locked) handTimer = setTimeout(() => hand.style.opacity = 1, current === 0 ? 3200 : 2400);
+  }
+
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    // load the clip only on its slide, and unload it when leaving so it stops playing
+    if (current === 1) { if (!clip.src) clip.src = clip.dataset.src; }
+    else if (clip.src) clip.removeAttribute('src');
+    showFwd();
+  }
+
+  pov.addEventListener('click', () => {
+    if (pov.classList.contains('open')) return;
+    pov.classList.add('open'); s4.classList.add('revealed');
+    showFwd();
+  });
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { pov.classList.remove('open'); s4.classList.remove('revealed'); go(0); });
+  window.addEventListener('resize', fit);
+
+  // preview helper: open with #2 … #5 to start on that slide (#4open shows the revealed card)
+  if (location.hash.includes('open')) { pov.classList.add('open'); s4.classList.add('revealed'); }
+  const start = parseInt(location.hash.slice(1), 10);
+  go(start >= 1 && start <= slides.length ? start - 1 : 0);
+</script>
+</body>
+</html>
