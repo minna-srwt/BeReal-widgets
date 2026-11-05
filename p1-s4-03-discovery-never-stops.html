@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discovery Never Stops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4;
+    --green: #18DD4C; --green-dark: #07A657; --green-50: #ECFDF1; --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+
+  /* top bar */
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft { display: flex; align-items: center; gap: 14px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+
+  /* slides */
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .35s !important; } .d2 { transition-delay: .7s !important; } .d3 { transition-delay: 1.05s !important; } .d4 { transition-delay: 1.4s !important; }
+
+  /* navigation */
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); }
+  .fwd:hover { background: var(--green-dark); }
+  .fwd:hover svg path { stroke: var(--white); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  .fwd:focus-visible, .back:focus-visible, .restart:focus-visible { outline: 3px solid var(--black); outline-offset: 3px; }
+  .hand { position: absolute; right: 22px; bottom: 6px; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+
+  /* ---------- slide 1: the discovery loop ---------- */
+  .s1 { display: flex; align-items: center; justify-content: center; padding: 60px 30px 20px; }
+  .loop { width: 100%; height: 100%; max-height: 520px; }
+  .loop text { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 23px; }
+  .loop .stop, .loop .lbl { opacity: 0; transition: opacity .4s ease; }
+  .loop .arc { stroke-dasharray: 400; stroke-dashoffset: 400; transition: stroke-dashoffset .5s ease; }
+  .slide.active .loop .stop, .slide.active .loop .lbl { opacity: 1; }
+  .slide.active .loop .arc { stroke-dashoffset: 0; }
+
+  /* ---------- slide 2: objection + clip ---------- */
+  .s2 { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .s2 .hook { font-size: 26px; line-height: 1.3; margin-right: 20px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--soft); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  /* ---------- slide 3: the quote ---------- */
+  .s3 { display: flex; flex-direction: column; justify-content: center; padding-bottom: 80px; }
+  .quote { position: relative; border-left: 8px solid var(--black); padding: 8px 0 8px 32px; margin-right: 60px; }
+  .quote .mark { position: absolute; top: -58px; left: 18px; font-family: 'DM Serif Text', serif; font-size: 120px; line-height: 1; color: var(--gray); }
+  .quote p { position: relative; font-size: 40px; line-height: 1.25; }
+  .quote .who { display: block; margin-top: 18px; font-size: 20px; font-weight: 700; }
+  .changes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+  .changes span { font-size: 17px; font-weight: 800; padding: 6px 14px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); opacity: 0; transform: scale(.8); transition: opacity .3s ease, transform .3s cubic-bezier(.3,1.6,.5,1); }
+  .slide.active .changes span { opacity: 1; transform: none; }
+  .changes span:nth-child(1) { transition-delay: 1s; } .changes span:nth-child(2) { transition-delay: 1.2s; } .changes span:nth-child(3) { transition-delay: 1.4s; } .changes span:nth-child(4) { transition-delay: 1.6s; }
+
+  /* ---------- slide 4: three reasons ---------- */
+  .s4 { display: flex; flex-direction: column; gap: 14px; }
+  .s4 h2 { font-size: 34px; line-height: 1.1; }
+  .reasons { display: flex; flex-direction: column; gap: 12px; margin-right: 110px; }
+  .reason { display: grid; grid-template-columns: 54px 1fr; gap: 16px; align-items: start; border: 2.5px solid var(--black); border-radius: 18px; padding: 14px 18px; background: var(--white); }
+  .reason:nth-child(2) { background: var(--soft); }
+  .reason .n { width: 50px; height: 50px; border-radius: 50%; background: var(--black); color: var(--white); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 26px; }
+  .reason p { font-size: 20px; line-height: 1.42; }
+  .reason p b { font-weight: 800; }
+
+  /* ---------- slide 5: the objection answered ---------- */
+  .s5 { display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-bottom: 60px; }
+  .ask { display: flex; align-items: flex-start; gap: 14px; }
+  .ask .pin { font-size: 34px; line-height: 1.1; }
+  .ask h2 { font-size: 36px; line-height: 1.15; }
+  .answer { border: 3px solid var(--black); border-radius: 20px; padding: 18px 22px; background: var(--white); box-shadow: 8px 8px 0 var(--gray); margin-right: 110px; display: flex; flex-direction: column; gap: 12px; }
+  .answer p { font-size: 21px; line-height: 1.45; }
+  .answer .said { display: inline; font-weight: 800; background: var(--soft); padding: 0 4px; border-radius: 4px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <button class="restart" id="restart" type="button">↺ Start over</button>
+  </div>
+
+  <!-- ================= Slide 1: the discovery loop ================= -->
+  <section class="slide s1 active" aria-live="polite">
+    <svg class="loop" id="loop" viewBox="-60 0 880 470" role="img" aria-label="A loop of five stops: Notice a problem, Check it against data, Decide what to try, Ship it, Watch what users do, and a green arrow back to Notice a problem">
+      <defs>
+        <marker id="hb" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#000"/></marker>
+        <marker id="hg" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="24" markerHeight="24" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#07A657" stroke="#000" stroke-width="1"/></marker>
+      </defs>
+    </svg>
+  </section>
+
+  <!-- ================= Slide 2: the objection + clip ================= -->
+  <section class="slide s2">
+    <p class="hook serif auto">Gia often hears an objection from founders: they built the product to solve their own problem, so they already know the customer. Here's her answer:</p>
+    <div class="vwrap auto d1">
+      <div class="video">
+        <iframe id="clip" data-src="https://www.youtube.com/embed/0FgZ1VVxEBo?start=3525&end=3570" title="Customer-led growth | Georgiana Laudi — products change, customers change" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Slide 3: the quote ================= -->
+  <section class="slide s3">
+    <blockquote class="quote auto">
+      <p class="serif">"Products change, markets change, customers change, teams change… not everything can live inside of your head."</p>
+      <span class="who">— Georgiana Laudi</span>
+    </blockquote>
+    <div class="changes" aria-hidden="true"><span>products</span><span>markets</span><span>customers</span><span>teams</span></div>
+  </section>
+
+  <!-- ================= Slide 4: three reasons ================= -->
+  <section class="slide s4">
+    <h2 class="serif auto">Three reasons discovery never stops:</h2>
+    <div class="reasons">
+      <div class="reason auto d1"><span class="n">1</span><p><b>Users change.</b> The people who loved BeReal at launch aren't the same people opening it today.</p></div>
+      <div class="reason auto d2"><span class="n">2</span><p><b>The product changes.</b> Every new feature creates new moments that can work or break.</p></div>
+      <div class="reason auto d3"><span class="n">3</span><p><b>Every answer raises a new question.</b> Your Data Organizer probably ended with at least one 🟡 signal or 🔴 conflict. That's not a failure. That's your next discovery question.</p></div>
+    </div>
+  </section>
+
+  <!-- ================= Slide 5: doesn't it slow you down? ================= -->
+  <section class="slide s5">
+    <div class="ask auto"><span class="pin" aria-hidden="true">📌</span><h2 class="serif">Doesn't constant research slow everything down?</h2></div>
+    <div class="answer auto d1">
+      <p>Gia says it doesn't have to. A survey can take <span class="said">"two or three weeks,"</span> and you can still <span class="said">"come to something decisive."</span></p>
+      <p>Discovery isn't about waiting until you're certain. <b>It's about making the best call you can with what you know, then checking again.</b></p>
+    </div>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true">
+    <path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+    <line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/>
+  </svg>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+
+  // The discovery loop: five stops clockwise from the top; the last arc (back to the start) is green
+  const STOPS = ['Notice a problem', 'Check it against data', 'Decide what to try', 'Ship it', 'Watch what users do'];
+  const CX = 380, CY = 240, R = 150, GAP = 11;
+  const pt = deg => [CX + R * Math.cos(deg * Math.PI / 180), CY + R * Math.sin(deg * Math.PI / 180)];
+  const loop = document.getElementById('loop');
+  let svg = '';
+  STOPS.forEach((label, i) => {
+    const a = -90 + i * 72, [x1, y1] = pt(a + GAP), [x2, y2] = pt(a + 72 - GAP);
+    const last = i === STOPS.length - 1;
+    const delay = 0.3 + i * 0.45;
+    svg += `<path class="arc" d="M${x1} ${y1} A${R} ${R} 0 0 1 ${x2} ${y2}" fill="none" stroke="${last ? '#07A657' : '#000'}" stroke-width="${last ? 6 : 3.5}" marker-end="url(#${last ? 'hg' : 'hb'})" style="transition-delay:${delay + 0.25}s"/>`;
+    const [sx, sy] = pt(a);
+    svg += `<circle class="stop" cx="${sx}" cy="${sy}" r="13" fill="${i === 0 ? '#18DD4C' : '#FFFFFF'}" stroke="#000" stroke-width="3.5" style="transition-delay:${delay}s"/>`;
+    // labels sit outside the ring: above the top stop, to the side of the others
+    const [lx, ly] = pt(a), side = Math.cos(a * Math.PI / 180);
+    const anchor = Math.abs(side) < 0.2 ? 'middle' : side > 0 ? 'start' : 'end';
+    const tx = anchor === 'middle' ? lx : lx + (side > 0 ? 26 : -26);
+    const ty = anchor === 'middle' ? ly - 28 : ly + (Math.sin(a * Math.PI / 180) > 0.5 ? 34 : 7);
+    svg += `<text class="lbl" x="${tx}" y="${ty}" text-anchor="${anchor}" style="transition-delay:${delay}s">${label}</text>`;
+  });
+  loop.insertAdjacentHTML('beforeend', svg);
+
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd');
+  const back = document.getElementById('back');
+  const hand = document.getElementById('hand');
+  const clip = document.getElementById('clip');
+  const CLIP_SLIDE = 1;
+  let current = 0, handTimer;
+
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    fwd.classList.toggle('hidden', current === slides.length - 1);
+    // load the clip only on its slide, and unload it when leaving so it stops playing
+    if (current === CLIP_SLIDE) { if (!clip.src) clip.src = clip.dataset.src; }
+    else if (clip.src) clip.removeAttribute('src');
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1) handTimer = setTimeout(() => hand.style.opacity = 1, 3200);
+  }
+
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => go(0));
+  window.addEventListener('resize', fit);
+
+  // preview helper: #N opens slide N
+  const start = parseInt(location.hash.slice(1), 10);
+  go(start >= 1 && start <= slides.length ? start - 1 : 0);
+</script>
+</body>
+</html>
