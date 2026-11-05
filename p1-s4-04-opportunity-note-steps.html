@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Write an Opportunity Note</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4;
+    --green: #18DD4C; --green-dark: #07A657; --green-50: #ECFDF1; --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+
+  /* top bar */
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft { display: flex; align-items: center; gap: 14px; }
+  .topright { display: flex; align-items: center; gap: 10px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .tplbtn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: var(--white); border: 2.5px solid var(--black); color: var(--black); font-size: 16px; font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--black); white-space: nowrap; }
+  .tplbtn:hover { background: var(--black); color: var(--white); }
+  .tplbtn:hover svg path, .tplbtn:hover svg line { stroke: var(--white); }
+
+  /* slides */
+  .slide { position: absolute; inset: 0; padding: 66px 40px 26px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .35s !important; } .d2 { transition-delay: .7s !important; } .d3 { transition-delay: 1.05s !important; } .d4 { transition-delay: 1.4s !important; } .d5 { transition-delay: 1.75s !important; }
+
+  a { color: var(--black); font-weight: 800; text-decoration: underline; text-decoration-color: var(--green); text-decoration-thickness: 3px; text-underline-offset: 3px; }
+  a:hover { text-decoration-color: var(--black); }
+
+  /* navigation */
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); }
+  .fwd:hover { background: var(--green-dark); }
+  .fwd:hover svg path { stroke: var(--white); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  .fwd:focus-visible, .back:focus-visible, .restart:focus-visible, .hbtn:focus-visible, .tplbtn:focus-visible, a:focus-visible { outline: 3px solid var(--black); outline-offset: 3px; }
+  .hand { position: absolute; right: 22px; bottom: 6px; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+
+  /* notes */
+  .check, .stuck { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; padding: 12px 16px; border-radius: 14px; font-size: 18px; line-height: 1.42; background: var(--white); }
+  .check { border: 2.5px solid var(--black); }
+  .stuck { border: 2px dashed var(--black); }
+  .check .ic, .stuck .ic { font-size: 20px; line-height: 1.3; }
+
+  /* step layout: number rail + content */
+  .step { display: grid; grid-template-columns: 92px 1fr; column-gap: 24px; }
+  .rail { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+  .rail .num { width: 84px; height: 84px; border-radius: 20px; background: var(--white); border: 3px solid var(--black); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 54px; line-height: 1; box-shadow: 6px 6px 0 var(--gray); }
+  .rail .of { margin-top: 12px; font-size: 14px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; }
+  .rail .part { margin-top: 6px; font-size: 14px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--black); color: var(--white); white-space: nowrap; }
+  .rail .line { flex: 1; width: 4px; margin-top: 12px; background: repeating-linear-gradient(var(--gray) 0 10px, transparent 10px 18px); border-radius: 2px; }
+  .body { display: flex; flex-direction: column; gap: 11px; min-width: 0; padding-right: 20px; }
+  .body h2 { font-size: 30px; line-height: 1.1; }
+  .body p { font-size: 19px; line-height: 1.46; }
+  .body .spacer { flex: 1; }
+  .pad { margin-right: 96px; }
+  .kicker { font-size: 14px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #444; }
+
+  /* the fill-in structure, and the example */
+  .frame { border: 3px solid var(--black); border-radius: 14px; padding: 12px 16px; font-size: 19px; line-height: 1.45; background: var(--white); box-shadow: 6px 6px 0 var(--gray); }
+  .frame .slot { display: inline; padding: 1px 6px; border-radius: 6px; background: var(--soft); border: 1.5px dashed var(--black); font-weight: 700; }
+  .eg { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; border-left: 5px solid var(--black); background: var(--soft); padding: 10px 14px; border-radius: 0 12px 12px 0; font-size: 18px; line-height: 1.45; }
+  .eg .k { font-size: 14px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; padding-top: 3px; }
+  .eg em { font-style: italic; }
+  .bul { display: flex; flex-direction: column; gap: 6px; }
+  .bul div { display: grid; grid-template-columns: 22px 1fr; gap: 8px; font-size: 19px; line-height: 1.42; }
+  .bul div::before { content: "→"; font-weight: 800; }
+  .labels { display: flex; flex-wrap: wrap; gap: 8px; }
+  .labels span { font-size: 17px; font-weight: 700; padding: 5px 12px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); }
+
+  /* help buttons */
+  .help { position: relative; display: flex; gap: 12px; padding-right: 110px; }
+  .hbtn { font: inherit; font-size: 16px; font-weight: 700; padding: 9px 16px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; }
+  .hbtn[aria-expanded="true"] { background: var(--black); color: var(--white); }
+  .pop { position: absolute; left: 0; right: 110px; bottom: calc(100% + 10px); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .25s, transform .25s; box-shadow: 0 8px 24px rgba(0,0,0,.15); z-index: 4; }
+  .pop.show { opacity: 1; transform: none; pointer-events: auto; }
+
+  /* ---------- slide 1: hook ---------- */
+  .s1 { display: grid; grid-template-columns: 1.15fr 1fr; column-gap: 34px; align-items: center; padding-bottom: 50px; }
+  .s1 .lead { font-size: 42px; line-height: 1.2; }
+  .s1 .lead b { font-weight: 400; border-bottom: 4px solid var(--black); }
+  .note { justify-self: center; width: 100%; max-width: 300px; background: var(--white); border: 3px solid var(--black); border-radius: 6px; box-shadow: 10px 10px 0 var(--gray); padding: 18px 16px; display: flex; flex-direction: column; gap: 10px; transform: rotate(1.5deg); }
+  .note .t { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .nrow { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: center; border: 2px solid var(--black); border-radius: 8px; padding: 9px 10px; opacity: 0; transform: translateX(-10px); transition: opacity .35s ease, transform .35s ease; }
+  .slide.active .nrow { opacity: 1; transform: none; }
+  .nrow .n { width: 26px; height: 26px; border-radius: 50%; background: var(--black); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; }
+  .nrow b { font-size: 17px; }
+  .nrow:nth-child(odd) { background: var(--soft); }
+
+  /* ---------- slide 2: the map ---------- */
+  .m2 { display: flex; flex-direction: column; justify-content: center; gap: 12px; padding-bottom: 30px; }
+  .rows { display: flex; flex-direction: column; gap: 10px; }
+  .row { display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center; border: 2.5px solid var(--black); border-radius: 16px; padding: 11px 16px; background: var(--white); }
+  .row:nth-child(even) { background: var(--soft); }
+  .row .n { width: 44px; height: 44px; border-radius: 50%; background: var(--black); color: var(--white); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 22px; }
+  .row .nm { font-size: 20px; font-weight: 800; line-height: 1.2; }
+  .row .what { display: block; font-size: 17px; line-height: 1.4; margin-top: 2px; }
+  .row .from { display: block; font-size: 15px; font-weight: 700; margin-top: 5px; color: #444; }
+  .row .stp { font-size: 14px; font-weight: 800; padding: 5px 11px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); white-space: nowrap; }
+  .chip { display: inline-flex; align-self: flex-start; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); font-weight: 700; font-size: 17px; }
+
+  /* ---------- slide 3: note on method ---------- */
+  .s3 { display: flex; flex-direction: column; justify-content: center; gap: 16px; padding-bottom: 50px; }
+  .s3 .head { display: flex; align-items: center; gap: 12px; }
+  .s3 .head span { font-size: 32px; }
+  .s3 h2 { font-size: 34px; line-height: 1.1; }
+  .method { border: 3px solid var(--black); border-radius: 20px; padding: 18px 22px; display: flex; flex-direction: column; gap: 12px; background: var(--white); margin-right: 104px; }
+  .method p { font-size: 20px; line-height: 1.45; }
+  .method p.last { border-top: 2px dashed var(--black); padding-top: 12px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <a class="tplbtn tpl-link" href="#" target="_blank" rel="noopener">
+        <svg width="16" height="20" viewBox="0 0 16 20" aria-hidden="true"><path d="M1.5 1.5 h8.5 l4.5 4.5 v12.5 h-13 z" fill="#FFFFFF" stroke="#000" stroke-width="2" stroke-linejoin="round"/><line x1="4.5" y1="10" x2="11.5" y2="10" stroke="#000" stroke-width="2"/><line x1="4.5" y1="14" x2="11.5" y2="14" stroke="#000" stroke-width="2"/></svg>
+        Template ↗
+      </a>
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+
+  <!-- ================= Slide 1: hook ================= -->
+  <section class="slide s1 active" aria-live="polite">
+    <p class="lead serif auto">Your note has <b>four parts</b>, and you'll fill them in order:</p>
+    <div class="note auto d1" role="img" aria-label="A one-page note with four parts: Problem, Evidence, Opportunity, Impact">
+      <span class="t">💡 BeReal Opportunity Note</span>
+      <div class="nrow" style="transition-delay:.9s"><span class="n">1</span><b>Problem</b></div>
+      <div class="nrow" style="transition-delay:1.2s"><span class="n">2</span><b>Evidence</b></div>
+      <div class="nrow" style="transition-delay:1.5s"><span class="n">3</span><b>Opportunity</b></div>
+      <div class="nrow" style="transition-delay:1.8s"><span class="n">4</span><b>Impact</b></div>
+    </div>
+  </section>
+
+  <!-- ================= Slide 2: the four parts ================= -->
+  <section class="slide m2">
+    <div class="rows">
+      <div class="row auto"><span class="n">1</span><span><span class="nm">1. Problem</span><span class="what">One user problem, in one or two sentences</span><span class="from">Comes from: Your teardown's broken moment</span></span><span class="stp">Step 2</span></div>
+      <div class="row auto d1"><span class="n">2</span><span><span class="nm">2. Evidence</span><span class="what">2–3 pieces that back it up, each with its source</span><span class="from">Comes from: Your teardown + Data Organizer</span></span><span class="stp">Step 3</span></div>
+      <div class="row auto d2"><span class="n">3</span><span><span class="nm">3. Opportunity</span><span class="what">What could change if it were solved</span><span class="from">Comes from: New</span></span><span class="stp">Step 4</span></div>
+      <div class="row auto d3"><span class="n">4</span><span><span class="nm">4. Impact</span><span class="what">What you'd measure, and how sure you are</span><span class="from">Comes from: Your MAU bet</span></span><span class="stp">Step 5</span></div>
+    </div>
+    <span class="chip auto d4">⏱️ About 45 minutes</span>
+  </section>
+
+  <!-- ================= Slide 3: a note on method ================= -->
+  <section class="slide s3">
+    <div class="head auto"><span aria-hidden="true">📌</span><h2 class="serif">A note on method</h2></div>
+    <div class="method auto d1">
+      <p>Gia's actual process for SparkToro started with surveying real customers, several of them, not one.</p>
+      <p>Your Data Organizer got you closer to that than your teardown alone: real numbers and real users' words. But you still haven't asked BeReal users anything directly, and app reviews lean toward people with strong feelings.</p>
+      <p class="last">That's a real gap, not a technicality. Write your note with full confidence in what you found, and <b>let your confidence label say how far it goes.</b></p>
+    </div>
+  </section>
+
+  <!-- ================= Step 1 ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">1</div><div class="of">Step 1 of 6</div><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Copy the Template</h2>
+      <p class="auto d1">👉🏽 <a class="tpl-link" href="#" target="_blank" rel="noopener">Make a copy of the BeReal Opportunity Note</a> (File → Make a copy), and rename it <em>"BeReal Opportunity Note: [Your Name]"</em>.</p>
+      <p class="auto d2">Keep your teardown and Data Organizer open next to it. You'll pull from both.</p>
+      <div class="check auto d3 pad"><span class="ic">✅</span><span>You're on track if you can see the four parts in your copy.</span></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 2: Problem ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">2</div><div class="of">Step 2 of 6</div><span class="part">Part 1</span><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Define the Problem</h2>
+      <p class="auto d1">Start from the broken moment in Box 4 of your Data Organizer. Then write it using this structure, from <a href="https://www.prodpad.com/" target="_blank" rel="noopener">ProdPad</a>:</p>
+      <p class="frame auto d1"><span class="slot">[User type]</span> experiences <span class="slot">[problem]</span> when <span class="slot">[context]</span>, which results in <span class="slot">[negative outcome or frustration]</span>.</p>
+      <div class="eg auto d2"><span class="k">Example</span><em>Instagram users feel anxious about posting because they worry about how their content will perform immediately after posting, which leads to delays or fewer original posts.</em></div>
+      <p class="auto d3">Keep it short: one or two sentences that focus on the <em>user's experience</em>, not the app's feature.</p>
+      <div class="spacer"></div>
+      <div class="help auto d4" data-help="2"></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 3: Evidence ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">3</div><div class="of">Step 3 of 6</div><span class="part">Part 2</span><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Add the Evidence</h2>
+      <p class="auto d1">Back up your problem with 2–3 pieces of evidence. Each one gets a row, and each row says where it came from:</p>
+      <div class="bul auto d1">
+        <div><span>a <b>teardown moment #</b> (what you saw yourself)</span></div>
+        <div><span>a <b>Data Organizer box and row</b> (a number from Box 1, or a quote # from Box 2)</span></div>
+      </div>
+      <div class="eg auto d2"><span class="k">Example</span><span>Teardown, moment #4: hesitated right after receiving the daily notification.</span></div>
+      <p class="auto d3">Then copy your theme's label from Box 3: 🟢 pattern, 🟡 signal, or 🔴 conflict. <b>Don't upgrade it.</b> A 🟡 stays a 🟡 here.</p>
+      <div class="spacer"></div>
+      <div class="help auto d4" data-help="3"></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 4: Opportunity ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">4</div><div class="of">Step 4 of 6</div><span class="part">Part 3</span><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Frame the Opportunity</h2>
+      <p class="auto d1">Now state what could change if the problem were solved:</p>
+      <p class="frame auto d1">If we <span class="slot">[describe the improvement or shift]</span>, <span class="slot">[user type]</span> may feel <span class="slot">[___]</span> and be more likely to <span class="slot">[___]</span>.</p>
+      <div class="eg auto d2"><span class="k">Example</span><em>Introducing a more relaxed posting mode (like a "no likes for 24 hours" option) could help users share more authentically without fear of judgment.</em></div>
+      <p class="auto d3">Name <b>one</b> change, not a list of features. You're pointing at a direction, not designing the solution.</p>
+      <div class="check auto d4 pad"><span class="ic">✅</span><span>You're on track if your opportunity fixes the exact problem in Part 1, not a different one.</span></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 5a: Impact ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">5</div><div class="of">Step 5 of 6</div><span class="part">Part 4</span><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Describe the Potential Impact</h2>
+      <p class="auto d1">Wrap it up by connecting to a measurable outcome:</p>
+      <div class="bul auto d1">
+        <div><span><b>What I'd measure:</b> the one number that would tell you it worked.</span></div>
+        <div><span><b>How it connects to MAU:</b> why that number would show up in monthly active users.</span></div>
+        <div><span><b>My confidence:</b> Low, Medium, or High, and why.</span></div>
+      </div>
+      <div class="eg auto d2 pad"><span class="k">Example</span><em>Reducing post anxiety could increase daily shares and story uploads, leading to higher user-generated content and overall engagement.</em></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 5b: the third version of your bet ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">5</div><div class="of">Step 5 of 6</div><span class="part">Part 4</span><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Describe the Potential Impact</h2>
+      <p class="auto d1">Your MAU bet has already moved twice: in your teardown (Part E), then in Box 4. <b>This is its third version.</b> Say what changed, or why it didn't.</p>
+      <div class="labels auto d2" aria-hidden="true"><span>1 · Teardown, Part E</span><span>2 · Data Organizer, Box 4</span><span style="background:var(--black);color:var(--white)">3 · Opportunity Note, Part 4</span></div>
+      <div class="spacer"></div>
+      <div class="help auto d3" data-help="5"></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 6 ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">6</div><div class="of">Step 6 of 6</div><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Submit Your Note</h2>
+      <p class="auto d1">Set your Google Doc to <b>"Anyone with the link can view"</b>, then submit the link below. You'll use it in the next task.</p>
+      <div class="check auto d2"><span class="ic">✅</span><span>You're on track if all four parts are filled in, and every piece of evidence says where it's from.</span></div>
+    </div>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true">
+    <path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+    <line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/>
+  </svg>
+</div>
+
+<script>
+  // The BeReal Opportunity Note Google Doc; /copy opens Google's "Make a copy" screen
+  const TEMPLATE_URL = 'https://docs.google.com/document/d/1palfRJfCeE_DcUK1Y_Reku2cfMNaOauC6ti3hjrfa-o/copy';
+  document.querySelectorAll('.tpl-link').forEach(a => a.href = TEMPLATE_URL);
+
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+
+  // on-track / stuck notes, word for word
+  const HELP = {
+    2: ['You\'re on track if someone who\'s never used BeReal could picture who struggles, and when.',
+        'Your Box 4 verdict was "contradicts it"? Then your broken moment may not be the right problem. Look in Box 3 for a theme labelled 🟢 and start from that instead.'],
+    3: ['You\'re on track if a reader could find every piece of evidence in your teardown or organizer.',
+        'All your evidence is from your own teardown? Add at least one row from Box 1 or Box 2. That\'s what makes it more than one person\'s opinion.'],
+    5: ['You\'re on track if your confidence matches your evidence label. A 🟡 signal with "High" confidence needs a very good reason.',
+        'Can\'t think of what to measure? Ask: <em>if this worked, what would users do more often?</em> Count that.']
+  };
+  document.querySelectorAll('[data-help]').forEach(el => {
+    const k = el.dataset.help, [ok, stuck] = HELP[k];
+    el.innerHTML =
+      `<button class="hbtn" type="button" aria-expanded="false" data-pop="ok${k}">✅ Am I on track?</button>` +
+      `<button class="hbtn" type="button" aria-expanded="false" data-pop="st${k}">😵‍💫 Stuck?</button>` +
+      `<div class="pop check" id="ok${k}"><span class="ic">✅</span><span>${ok}</span></div>` +
+      `<div class="pop stuck" id="st${k}"><span class="ic">😵‍💫</span><span>${stuck}</span></div>`;
+  });
+  const hbtns = [...document.querySelectorAll('.hbtn')];
+  function closePops() {
+    hbtns.forEach(b => { b.setAttribute('aria-expanded', 'false'); document.getElementById(b.dataset.pop).classList.remove('show'); });
+  }
+  hbtns.forEach(b => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') === 'true';
+    closePops();
+    if (!open) { b.setAttribute('aria-expanded', 'true'); document.getElementById(b.dataset.pop).classList.add('show'); }
+  }));
+
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd');
+  const back = document.getElementById('back');
+  const hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  function go(to) {
+    closePops();
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    fwd.classList.toggle('hidden', current === slides.length - 1);
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1) handTimer = setTimeout(() => hand.style.opacity = 1, 2600);
+  }
+
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => go(0));
+  window.addEventListener('resize', fit);
+
+  // preview helper: #N opens slide N; add "ok" or "st" to open a help note (e.g. #5st)
+  const start = parseInt(location.hash.slice(1), 10);
+  go(start >= 1 && start <= slides.length ? start - 1 : 0);
+  const pop = location.hash.match(/(ok|st)$/);
+  if (pop) { const b = slides[current].querySelectorAll('.hbtn')[pop[1] === 'ok' ? 0 : 1]; if (b) b.click(); }
+</script>
+</body>
+</html>
