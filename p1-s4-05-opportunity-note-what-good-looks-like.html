@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opportunity Note: What Good Looks Like</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4;
+    --green: #18DD4C; --green-dark: #07A657; --green-50: #ECFDF1; --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+
+  /* top bar */
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .menu-btn { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px 0 12px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 16px; font-weight: 700; transition: opacity .3s; }
+  .menu-btn:hover { background: var(--gray); }
+  .jump { margin-left: auto; margin-right: 12px; display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 16px; font-weight: 800; box-shadow: 0 3px 0 var(--black); white-space: nowrap; }
+  .jump:hover { background: var(--black); color: var(--white); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  .menu-btn:focus-visible, .restart:focus-visible, .pick:focus-visible, .jump:focus-visible, .stab:focus-visible, .fwd:focus-visible, a:focus-visible { outline: 3px solid var(--black); outline-offset: 4px; }
+
+  a { color: var(--black); font-weight: 700; text-decoration: underline; text-decoration-color: var(--green); text-decoration-thickness: 3px; text-underline-offset: 3px; }
+  a:hover { text-decoration-color: var(--black); }
+
+  /* pages fill the whole canvas; content sits below the top bar */
+  .page { position: absolute; inset: 0; padding: 66px 40px 24px; opacity: 0; pointer-events: none; transition: opacity .4s ease; overflow: hidden; display: flex; flex-direction: column; gap: 12px; }
+  .page.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .45s ease, transform .45s ease; }
+  .page.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .25s !important; } .d2 { transition-delay: .5s !important; } .d3 { transition-delay: .75s !important; }
+
+  /* forward arrow: steps through a page's parts */
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--green-dark); }
+  .fwd:hover svg path { stroke: var(--white); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+
+  /* hand: on the menu it sits in the next card not opened */
+  .hand { position: absolute; width: 58px; height: 64px; pointer-events: none; animation: tap 1.4s ease-in-out infinite; opacity: 0; transition: opacity .3s; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  .pick .hand { right: 8px; bottom: -14px; z-index: 3; }
+  .page.active .pick.next .hand { opacity: 1; transition: opacity .4s ease 1.2s; }
+
+  /* ---------- menu ---------- */
+  .p-menu { justify-content: center; gap: 20px; padding-bottom: 34px; }
+  .p-menu h2 { font-size: 52px; line-height: 1; }
+  .p-menu .lead { font-size: 21px; line-height: 1.45; }
+  .picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .pick { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; text-align: left; padding: 20px 20px 18px; border-radius: 22px; border: 3px solid var(--black); background: var(--white); cursor: pointer; font: inherit; color: inherit; min-height: 200px; box-shadow: 7px 7px 0 var(--gray); transition: transform .15s, box-shadow .15s; }
+  .pick:hover { transform: translate(-2px,-2px); box-shadow: 9px 9px 0 var(--black); }
+  .pick .ico { width: 60px; height: 60px; border-radius: 16px; border: 2.5px solid var(--black); background: var(--soft); display: flex; align-items: center; justify-content: center; font-size: 30px; }
+  .pick .name { font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.05; }
+  .pick .sub { font-size: 14px; font-weight: 700; margin-top: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .pick .sub span { padding: 3px 9px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); }
+  .pick .seen { position: absolute; top: -14px; right: -14px; width: 40px; height: 40px; border-radius: 50%; background: var(--black); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; transform: scale(0); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+  .pick.visited .seen { transform: scale(1); }
+  .duo { font-size: 18px; line-height: 1.45; padding: 10px 14px; border-radius: 12px; background: var(--soft); border: 1.5px solid var(--gray); }
+
+  /* ---------- page header + part tabs ---------- */
+  .phead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .phead h2 { font-size: 32px; line-height: 1.05; margin-right: 4px; }
+  .score { display: inline-flex; padding: 4px 11px; border-radius: 999px; border: 2.5px solid var(--black); font-size: 14px; font-weight: 800; background: var(--white); }
+  .stabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .stab { font: inherit; font-size: 15px; font-weight: 700; padding: 5px 12px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; }
+  .stab[aria-selected="true"] { background: var(--black); color: var(--white); }
+  .stab.seen:not([aria-selected="true"]) { background: var(--gray); }
+
+  /* parts inside a page */
+  .parts { position: relative; flex: 1; min-height: 0; }
+  .part { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .part.on { opacity: 1; pointer-events: auto; }
+  .part .lbl { font-size: 14px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #444; }
+  .part .lbl em { text-transform: none; letter-spacing: 0; font-weight: 600; }
+  .q { font-size: 18px; line-height: 1.4; }
+
+  /* tables */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.3; background: var(--white); }
+  .tbl th { background: var(--gray); text-align: left; padding: 6px 8px; border: 2px solid var(--black); font-size: 16px; }
+  .tbl td { padding: 5px 7px; border: 2px solid var(--black); vertical-align: top; }
+  .tbl td.c, .tbl th.c { text-align: center; white-space: nowrap; }
+  .padr { margin-right: 104px; }
+
+  /* Box 3 as theme cards: one card per grid row, so eight columns stay readable */
+  .theme { border: 2.5px solid var(--black); border-radius: 14px; overflow: hidden; background: var(--white); }
+  .theme .th { padding: 7px 12px; background: var(--soft); border-bottom: 2px solid var(--black); font-size: 17px; font-weight: 800; display: flex; gap: 10px; align-items: baseline; }
+  .theme .th small { font-size: 14px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: .06em; }
+  .srcs { display: grid; grid-template-columns: repeat(6, 1fr); }
+  .srcs div { padding: 6px 8px; border-right: 1.5px solid var(--gray); font-size: 16px; line-height: 1.3; min-height: 64px; }
+  .srcs div:last-child { border-right: none; }
+  .srcs div b { display: block; font-size: 14px; font-weight: 800; color: #444; margin-bottom: 3px; line-height: 1.2; }
+  .srcs div.tick { background: var(--soft); }
+  .theme .pat { padding: 7px 12px; border-top: 2px solid var(--black); font-size: 17px; line-height: 1.4; }
+  .theme .pat b.k { font-size: 14px; font-weight: 800; color: #444; text-transform: uppercase; letter-spacing: .06em; margin-right: 6px; }
+
+  /* quoted answers */
+  .ans { border: 2.5px solid var(--black); border-radius: 14px; background: var(--white); padding: 12px 16px; font-size: 20px; line-height: 1.45; }
+  .ans b.k { display: block; font-size: 14px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #444; margin-bottom: 4px; }
+
+  /* score annotations */
+  .ann { border-radius: 14px; padding: 10px 14px; font-size: 18px; line-height: 1.42; border: 2.5px solid var(--black); background: var(--white); }
+  .ann b.crit { display: inline-block; padding: 1px 10px; border-radius: 999px; margin-right: 6px; font-size: 15px; border: 2px solid var(--black); }
+  .good .ann b.crit { background: var(--black); color: var(--white); }
+  .bad .ann b.crit { background: var(--gray); }
+  .oneline { font-size: 18px; line-height: 1.42; padding: 10px 14px; border-left: 6px solid var(--black); background: var(--soft); }
+
+  /* ---------- rubric: one criterion at a time ---------- */
+  .crit-q { border: 3px solid var(--black); border-radius: 16px; padding: 14px 18px; box-shadow: 7px 7px 0 var(--gray); }
+  .crit-q .k { font-size: 14px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #444; }
+  .crit-q p { font-family: 'DM Serif Text', serif; font-size: 28px; line-height: 1.2; margin-top: 4px; }
+  .levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .lvl { border: 2.5px solid var(--black); border-radius: 14px; overflow: hidden; background: var(--white); display: flex; flex-direction: column; }
+  .lvl .lh { padding: 7px 12px; font-size: 16px; font-weight: 800; border-bottom: 2px solid var(--black); }
+  .lvl.l0 .lh { background: var(--white); }
+  .lvl.l1 .lh { background: var(--gray); }
+  .lvl.l2 .lh { background: var(--black); color: var(--white); }
+  .lvl .lb { padding: 10px 12px; font-size: 17px; line-height: 1.42; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <button class="menu-btn hidden" id="toMenu" type="button" aria-label="Back to the menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Menu
+    </button>
+    <button class="jump hidden" id="jump" type="button"></button>
+    <button class="restart" id="restart" type="button">↺ Start over</button>
+  </div>
+
+  <!-- ================= Menu ================= -->
+  <section class="page p-menu active" id="menu" aria-live="polite">
+    <h2 class="serif auto">What Good Looks Like</h2>
+    <p class="lead auto d1">This task is checked against three criteria from the rubric:</p>
+    <div class="picks auto d2">
+      <button class="pick" type="button" data-go="rubric"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">📏</span><span class="name">The rubric</span><span class="sub"><span>Specific</span><span>Connected</span><span>Committed</span></span></button>
+      <button class="pick" type="button" data-go="good"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">✅</span><span class="name">Strong example</span><span class="sub"><span>2 · 2 · 2</span></span></button>
+      <button class="pick" type="button" data-go="bad"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">❌</span><span class="name">Not-yet example</span><span class="sub"><span>0 · 0 · 0</span></span></button>
+    </div>
+    <p class="duo auto d3">📌 These examples continue the <b>Duolingo</b> organizer from the last task, so you can see the whole chain. Your note will be about BeReal.</p>
+  </section>
+
+  <!-- ================= Rubric ================= -->
+  <section class="page" id="rubric">
+    <div class="phead auto"><h2 class="serif">📏 The rubric</h2></div>
+    <div class="stabs auto" role="tablist"></div>
+    <div class="parts">
+      <div class="part" data-tab="Specific">
+        <div class="crit-q"><span class="k">Specific · The test question</span><p>Could someone picture exactly who struggles, when, and what you'd measure?</p></div>
+        <div class="levels padr">
+          <div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">"Users" and "engagement", with no moment or metric</span></div>
+          <div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Names the user or the moment, but not both, or the impact has no measure</span></div>
+          <div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">Names the user type, the exact moment, the outcome, and one thing to measure</span></div>
+        </div>
+      </div>
+      <div class="part" data-tab="Connected">
+        <div class="crit-q"><span class="k">Connected · The test question</span><p>Can a reader trace every piece of evidence back to your teardown or organizer?</p></div>
+        <div class="levels padr">
+          <div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">No evidence, or "people complain"</span></div>
+          <div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Some evidence is traceable, or the Box 3 label is missing or upgraded</span></div>
+          <div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">2–3 pieces, each pointing to a moment # or a Box and row, with the Box 3 label carried over honestly</span></div>
+        </div>
+      </div>
+      <div class="part" data-tab="Committed">
+        <div class="crit-q"><span class="k">Committed · The test question</span><p>Do you make one clear call, with confidence that matches your evidence?</p></div>
+        <div class="levels padr">
+          <div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">Several problems, or a list of features, or "High" with nothing behind it</span></div>
+          <div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">One problem, but a vague opportunity or no reason for the confidence</span></div>
+          <div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">One problem, one opportunity, and a confidence level with a reason</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Strong example ================= -->
+  <section class="page good" id="good">
+    <div class="phead auto">
+      <h2 class="serif">✅ Strong example</h2>
+      <span class="score">Specific 2</span><span class="score">Connected 2</span><span class="score">Committed 2</span>
+    </div>
+    <div class="stabs auto" role="tablist"></div>
+    <div class="parts">
+      <div class="part" data-tab="1. Problem">
+        <div class="ans padr"><b class="k">1. Problem</b><em>Free Duolingo learners have their practice cut off when they run out of energy partway through a session, even when they make no mistakes, which ends their practice early unless they watch an ad, spend gems, or pay.</em></div>
+      </div>
+      <div class="part" data-tab="2. Evidence">
+        <span class="lbl">2. Evidence</span>
+        <table class="tbl">
+          <colgroup><col style="width:6%"><col style="width:58%"><col style="width:36%"></colgroup>
+          <tr><th class="c">#</th><th>What it shows</th><th>Where it's from</th></tr>
+          <tr><td class="c">1</td><td>"In my third lesson, with no mistakes, my energy ran out."</td><td>My teardown, moment #7</td></tr>
+          <tr><td class="c">2</td><td>A writer quit after a 700+ day streak because they ran out of energy "during the third lesson."</td><td>Data Organizer, Box 2, #6–#7 (Android Authority)</td></tr>
+          <tr><td class="c">3</td><td>The only review that mentions energy is from a paying user who loves it, so the problem looks specific to free users.</td><td>Data Organizer, Box 2, #5, and Box 3</td></tr>
+        </table>
+        <p class="q padr"><b>How strong is it?</b> ☑ 🟡 Signal (with a 🔴 conflict between free and paying users)</p>
+      </div>
+      <div class="part" data-tab="3. Opportunity">
+        <div class="ans padr"><b class="k">3. Opportunity</b><em>If we let free learners always finish the lesson they started (energy can run out between lessons, never in the middle of one), free learners may feel the app is on their side and be more likely to keep their daily practice going.</em></div>
+      </div>
+      <div class="part" data-tab="4. Impact">
+        <span class="lbl">4. Impact</span>
+        <div class="ans"><b class="k">What I'd measure</b>the share of free users who come back the day after they hit zero energy.</div>
+        <div class="ans"><b class="k">How it connects to MAU</b>about a third of Duolingo's monthly users open it on a given day (37.2M ÷ 113.1M, Box 1). The daily habit is what keeps people monthly active, so free users who keep their habit should stay in the MAU count.</div>
+        <div class="ans padr"><b class="k">My confidence: ☑ Low</b>because it's a 🟡 signal from one article and my own teardown. In Box 4, I'd already narrowed my bet to free users. I'd want to survey free learners before building anything.</div>
+      </div>
+      <div class="part" data-tab="Scores">
+        <span class="lbl">How it scores</span>
+        <div class="ann"><b class="crit">Specific: 2</b> Names the user (free learners), the moment (energy runs out mid-session, no mistakes), the outcome (practice ends unless they pay), and one measure.</div>
+        <div class="ann"><b class="crit">Connected: 2</b> Every piece of evidence points to a moment # or a Box and row, and the 🟡 label is carried over honestly, conflict included.</div>
+        <div class="ann padr"><b class="crit">Committed: 2</b> One problem, one change, and a Low confidence that matches a 🟡 signal, with a clear next step.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Not-yet example ================= -->
+  <section class="page bad" id="bad">
+    <div class="phead auto">
+      <h2 class="serif">❌ Not-yet example</h2>
+      <span class="score">Specific 0</span><span class="score">Connected 0</span><span class="score">Committed 0</span>
+    </div>
+    <div class="stabs auto" role="tablist"></div>
+    <div class="parts">
+      <div class="part" data-tab="Parts 1–2">
+        <div class="ans"><b class="k">1. Problem</b><em>Duolingo's energy system is bad for users.</em></div>
+        <span class="lbl" style="margin-top:6px">2. Evidence</span>
+        <table class="tbl padr">
+          <tr><th class="c">#</th><th>What it shows</th><th>Where it's from</th></tr>
+          <tr><td class="c">1</td><td>Lots of people complain about it</td><td>Online</td></tr>
+        </table>
+      </div>
+      <div class="part" data-tab="Parts 3–4">
+        <div class="ans"><b class="k">3. Opportunity</b><em>Remove energy, add more rewards, and improve the user experience.</em></div>
+        <div class="ans padr"><b class="k">4. Impact · My confidence: ☑ High</b>because MAU will go up a lot.</div>
+      </div>
+      <div class="part" data-tab="Scores">
+        <span class="lbl">How it scores</span>
+        <div class="ann"><b class="crit">Specific: 0</b> "Users" and "bad" don't say who struggles or when. There's nothing to measure.</div>
+        <div class="ann"><b class="crit">Connected: 0</b> "Online" can't be traced, and the 🔴 conflict from the organizer (a paying user who loves energy) has disappeared.</div>
+        <div class="ann padr"><b class="crit">Committed: 0</b> Three changes in one line isn't a call. "High" confidence from a 🟡 signal has no reason behind it.</div>
+        <p class="oneline padr"><b>The difference in one line:</b> the strong example tells you exactly what to try and how much to bet on it. The not-yet example asks you to take its word for it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- forward arrow (steps through a page's parts) -->
+  <button class="fwd hidden" id="fwd" type="button" aria-label="Next part">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+
+  const pages = [...document.querySelectorAll('.page')];
+  const picks = [...document.querySelectorAll('.pick')];
+  const toMenu = document.getElementById('toMenu');
+  const jump = document.getElementById('jump');
+  const fwd = document.getElementById('fwd');
+  const visited = new Set();
+  const JUMPS = { rubric: ['good', 'See the strong example →'], good: ['bad', 'See the not-yet example →'], bad: ['good', '← See the strong example'] };
+
+  // the rubric and each example are a short series of parts, with tabs across the top
+  const series = {};
+  ['rubric', 'good', 'bad'].forEach(id => {
+    const page = document.getElementById(id);
+    const parts = [...page.querySelectorAll('.part')];
+    const tabs = page.querySelector('.stabs');
+    tabs.innerHTML = parts.map((p, i) => `<button class="stab" type="button" role="tab" data-i="${i}">${p.dataset.tab}</button>`).join('');
+    const btns = [...tabs.querySelectorAll('.stab')];
+    series[id] = { parts, btns, i: 0 };
+    btns.forEach(b => b.addEventListener('click', () => showPart(id, +b.dataset.i)));
+  });
+  function showPart(id, i) {
+    const s = series[id];
+    s.i = i;
+    s.parts.forEach((p, k) => p.classList.toggle('on', k === i));
+    s.btns.forEach((b, k) => { b.setAttribute('aria-selected', k === i ? 'true' : 'false'); if (k === i) b.classList.add('seen'); });
+    fwd.classList.toggle('hidden', i === s.parts.length - 1);
+  }
+
+  function markNext() {
+    const next = picks.find(p => !visited.has(p.dataset.go));
+    picks.forEach(p => p.classList.toggle('next', p === next));
+  }
+
+  let currentId = 'menu';
+  function show(id) {
+    currentId = id;
+    pages.forEach(p => p.classList.toggle('active', p.id === id));
+    toMenu.classList.toggle('hidden', id === 'menu');
+    jump.classList.toggle('hidden', !JUMPS[id]);
+    if (JUMPS[id]) { jump.dataset.go = JUMPS[id][0]; jump.textContent = JUMPS[id][1]; }
+    if (series[id]) showPart(id, 0); else fwd.classList.add('hidden');
+    if (id !== 'menu') { visited.add(id); picks.forEach(p => p.classList.toggle('visited', visited.has(p.dataset.go))); }
+    markNext();
+  }
+
+  picks.forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+  jump.addEventListener('click', () => show(jump.dataset.go));
+  toMenu.addEventListener('click', () => show('menu'));
+  fwd.addEventListener('click', () => { const s = series[currentId]; if (s && s.i < s.parts.length - 1) showPart(currentId, s.i + 1); });
+  document.getElementById('restart').addEventListener('click', () => {
+    visited.clear(); picks.forEach(p => p.classList.remove('visited'));
+    Object.values(series).forEach(s => s.btns.forEach(b => b.classList.remove('seen')));
+    show('menu');
+  });
+  window.addEventListener('resize', fit);
+
+  // preview helper: #rubric, #good, #bad; add -N to open part N (e.g. #good-3)
+  const m = location.hash.slice(1).match(/^(rubric|good|bad)(?:-(\d))?$/);
+  show(m ? m[1] : 'menu');
+  if (m && m[2] && series[m[1]]) showPart(m[1], parseInt(m[2], 10) - 1);
+</script>
+</body>
+</html>
