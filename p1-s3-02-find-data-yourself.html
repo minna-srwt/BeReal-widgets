@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find Data Yourself</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000; --white: #FFFFFF; --gray: #E4E4E4;
+    --green: #18DD4C; --green-dark: #07A657; --green-50: #ECFDF1; --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; }
+
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+
+  /* top bar */
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft { display: flex; align-items: center; gap: 16px; }
+  .dots { display: flex; gap: 7px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--green-200); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { border-color: var(--green-dark); color: var(--green-dark); }
+
+  /* slides fill the whole canvas so full-bleed backgrounds work; content sits below the top bar */
+  .slide { position: absolute; inset: 0; padding: 66px 40px 26px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .8s !important; } .d3 { transition-delay: 1.2s !important; } .d4 { transition-delay: 1.6s !important; }
+
+  a { color: var(--green-dark); font-weight: 700; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  a:hover { color: var(--black); }
+
+  /* ---------- navigation ---------- */
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); }
+  .fwd:hover { background: var(--green-dark); }
+  .fwd:hover svg path { stroke: var(--white); }
+  /* on the bright-green slide the arrow flips to black with a white ring so it still pops */
+  .fwd.on-green { background: var(--black); box-shadow: 0 0 0 5px var(--white), 0 8px 0 5px var(--white); }
+  .fwd.on-green svg path { stroke: var(--green); }
+  .fwd.on-green:hover { background: var(--green-dark); }
+  .fwd.on-green:hover svg path { stroke: var(--white); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { border-color: var(--green-dark); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  .fwd:focus-visible, .back:focus-visible, .restart:focus-visible, a:focus-visible { outline: 3px solid var(--black); outline-offset: 4px; }
+
+  .hand { position: absolute; right: 22px; bottom: 6px; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+
+  /* shared */
+  .shead { display: flex; align-items: center; gap: 12px; }
+  .stag { flex: none; display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; background: var(--black); color: var(--white); font-size: 14px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+  .shead h2 { font-size: 32px; line-height: 1.1; }
+  .lead { font-size: 21px; line-height: 1.5; }
+  .padr { margin-right: 104px; }
+  .lbl { font-size: 14px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--green-dark); }
+
+  /* ---------- 1: hook ---------- */
+  .s1 { background: var(--green); display: flex; flex-direction: column; justify-content: flex-start; gap: 18px; padding-top: 96px; }
+  .s1 .stag { align-self: flex-start; }
+  .s1 .hook { font-size: 54px; line-height: 1.1; max-width: 900px; position: relative; z-index: 2; }
+  .scatter { position: absolute; right: 0; bottom: 0; width: 62%; height: 50%; z-index: 1; }
+  .scatter .ray { stroke-dasharray: 220; stroke-dashoffset: 220; }
+  .slide.active .scatter .ray { animation: shoot .8s ease-out forwards; }
+  @keyframes shoot { to { stroke-dashoffset: 0; } }
+
+  /* ---------- 2: the question ---------- */
+  .s2 { display: flex; flex-direction: column; justify-content: center; gap: 20px; padding-bottom: 40px; }
+  .qcard { border: 4px solid var(--black); border-radius: 22px; padding: 24px 28px; background: var(--white); box-shadow: 9px 9px 0 var(--black); font-size: 38px; line-height: 1.25; }
+  .qcard em { font-style: italic; }
+  .qcard .h1 { background: var(--green-200); padding: 0 6px; border-radius: 6px; box-decoration-break: clone; -webkit-box-decoration-break: clone; transition: background .4s ease 1.4s; }
+  .qcard .h2 { background: transparent; padding: 0 6px; border-radius: 6px; box-decoration-break: clone; -webkit-box-decoration-break: clone; transition: background .4s ease 2s; }
+  .slide.active .qcard .h2 { background: var(--green); }
+  .halves { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 21px; line-height: 1.45; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; border: 2.5px solid var(--black); font-weight: 800; font-size: 18px; }
+  .chip.a { background: var(--green-200); }
+  .chip.b { background: var(--green); }
+
+  /* ---------- 3: company numbers ---------- */
+  .s3 { display: flex; flex-direction: column; gap: 16px; padding-bottom: 26px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .stat { border: 3px solid var(--black); border-radius: 20px; padding: 14px 18px; background: var(--white); }
+  .stat b { display: block; font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 48px; line-height: 1.05; }
+  .stat span { font-size: 18px; font-weight: 800; }
+  .stat.dau { background: var(--green); }
+  .ratio { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
+  .three { display: flex; gap: 10px; }
+  .three i { width: 44px; height: 70px; border-radius: 22px 22px 10px 10px; border: 3px solid var(--black); background: var(--white); }
+  .three i.on { background: var(--green); }
+  .ratio p { font-size: 21px; line-height: 1.45; }
+
+  /* ---------- 4: credibility check ---------- */
+  .s4 { display: flex; flex-direction: column; gap: 12px; padding-bottom: 24px; }
+  .check { width: 100%; border-collapse: separate; border-spacing: 0; border: 3px solid var(--black); border-radius: 16px; overflow: hidden; font-size: 18px; line-height: 1.38; }
+  .check td { padding: 10px 14px; border-bottom: 1.5px solid var(--black); vertical-align: top; }
+  .check tr:last-child td { border-bottom: none; }
+  .check td:first-child { width: 42%; font-weight: 800; background: var(--green-50); border-right: 1.5px solid var(--black); }
+  .check td:last-child { opacity: 0; transition: opacity .4s ease; }
+  .slide.active .check td:last-child { opacity: 1; }
+  .ok { font-size: 19px; line-height: 1.45; padding: 10px 14px; border-radius: 14px; background: var(--green-50); border: 2px solid var(--green-dark); }
+  .pin { font-size: 19px; line-height: 1.45; padding: 10px 14px; border-radius: 14px; background: var(--gray); }
+
+  /* ---------- 5: independent second source ---------- */
+  .s5 { display: flex; flex-direction: column; justify-content: center; gap: 20px; padding-bottom: 40px; }
+  .ind { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .case { border: 3px solid var(--black); border-radius: 20px; padding: 14px 16px; background: var(--white); display: flex; flex-direction: column; gap: 10px; }
+  .case.yes { background: var(--green-50); }
+  .case .verdict { font-size: 18px; font-weight: 800; }
+  .case svg { width: 100%; height: auto; }
+
+  /* ---------- 6: three kinds of source ---------- */
+  .s6 { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .srcs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .src { border: 3px solid var(--black); border-radius: 18px; padding: 14px 14px; background: var(--white); display: flex; flex-direction: column; gap: 8px; font-size: 16px; line-height: 1.4; }
+  .src h3 { font-size: 20px; font-weight: 800; }
+  .src .k { font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--green-dark); }
+  .src .warn { background: var(--green-50); border-radius: 10px; padding: 8px 10px; }
+  .src:nth-child(3) .warn { background: var(--green-200); }
+  .srcs .src:last-child { margin-right: 0; }
+
+  /* ---------- 7: AI prompts ---------- */
+  .s7 { display: flex; flex-direction: column; justify-content: center; gap: 14px; padding-bottom: 30px; }
+  .prompt { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; border: 3px solid var(--black); border-radius: 16px; padding: 14px 16px; background: var(--green-50); }
+  .prompt .mono { font-size: 17px; line-height: 1.5; font-style: italic; }
+  .prompt .send { width: 40px; height: 40px; border-radius: 50%; background: var(--black); display: flex; align-items: center; justify-content: center; }
+  .always { font-family: 'DM Serif Text', serif; font-size: 26px; line-height: 1.3; border-left: 6px solid var(--green); padding-left: 16px; }
+
+  /* ---------- 8: where users talk ---------- */
+  .s8 { display: flex; flex-direction: column; gap: 16px; padding-bottom: 30px; }
+  .places { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .place { border: 3px solid var(--black); border-radius: 18px; padding: 16px; background: var(--white); display: flex; flex-direction: column; gap: 10px; font-size: 18px; line-height: 1.42; }
+  .place h3 { font-size: 22px; font-weight: 800; }
+  .place .k { font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--green-dark); }
+  .place .tip { background: var(--green-50); border-radius: 10px; padding: 8px 10px; }
+
+  /* ---------- 9: for each quote ---------- */
+  .s9 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; align-items: center; padding-bottom: 30px; }
+  .s9 .left { display: flex; flex-direction: column; gap: 14px; }
+  .s9 h3 { font-size: 24px; font-weight: 800; }
+  .steps3 { display: flex; flex-direction: column; gap: 10px; }
+  .steps3 div { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; font-size: 19px; line-height: 1.4; }
+  .steps3 span.n { width: 34px; height: 34px; border-radius: 50%; background: var(--green); border: 2.5px solid var(--black); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; }
+  .bot { font-size: 18px; line-height: 1.45; padding: 10px 14px; border-radius: 14px; background: var(--gray); }
+  .qdemo { position: relative; border: 3px solid var(--black); border-radius: 18px; background: var(--white); padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 12px; margin-right: 96px; }
+  .qdemo .qt { font-size: 18px; line-height: 1.45; font-style: italic; }
+  .qdemo .bar { height: 10px; border-radius: 5px; background: var(--gray); }
+  .tagrow { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tg { padding: 4px 10px; border-radius: 999px; border: 2px solid var(--black); font-size: 14px; font-weight: 800; background: var(--white); transform: scale(0); transition: transform .35s cubic-bezier(.3,1.6,.5,1); }
+  .slide.active .tg { transform: scale(1); }
+  .tg.t3 { background: var(--green); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .scatter .ray { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <button class="restart" id="restart" type="button">↺ Start over</button>
+  </div>
+
+  <!-- ================= 1: hook ================= -->
+  <section class="slide s1 active" data-bg="green" aria-live="polite">
+    <span class="stag auto">Step 1 of 4 · Ask one precise question</span>
+    <p class="hook serif auto d1">"Find data about Duolingo" sends you everywhere.</p>
+    <svg class="scatter" viewBox="0 0 480 300" preserveAspectRatio="xMaxYMax meet" aria-hidden="true">
+      <g stroke="#000" stroke-width="4" stroke-linecap="round" fill="none">
+        <path class="ray" d="M300 230 L120 80" style="animation-delay:.9s"/>
+        <path class="ray" d="M300 230 L210 40" style="animation-delay:1s"/>
+        <path class="ray" d="M300 230 L330 30" style="animation-delay:1.1s"/>
+        <path class="ray" d="M300 230 L450 70" style="animation-delay:1.2s"/>
+        <path class="ray" d="M300 230 L470 190" style="animation-delay:1.3s"/>
+        <path class="ray" d="M300 230 L90 200" style="animation-delay:1.4s"/>
+        <path class="ray" d="M300 230 L170 290" style="animation-delay:1.5s"/>
+      </g>
+      <g fill="#FFFFFF" stroke="#000" stroke-width="3">
+        <circle cx="120" cy="80" r="10"/><circle cx="210" cy="40" r="10"/><circle cx="330" cy="30" r="10"/><circle cx="450" cy="70" r="10"/><circle cx="470" cy="190" r="10"/><circle cx="90" cy="200" r="10"/>
+      </g>
+      <circle cx="300" cy="230" r="34" fill="#FFFFFF" stroke="#000" stroke-width="6"/>
+      <path d="M324 254 L352 282" stroke="#000" stroke-width="10" stroke-linecap="round"/>
+    </svg>
+  </section>
+
+  <!-- ================= 2: the precise question ================= -->
+  <section class="slide s2">
+    <p class="lead auto">A precise question tells you what to collect and when to stop:</p>
+    <p class="qcard serif auto d1"><em>Are people <span class="h1">coming back to Duolingo every day and every month</span>, and <span class="h2">why or why not</span>?</em></p>
+    <p class="halves auto d3 padr">Notice it has two halves: <span class="chip a">how many (numbers)</span> and <span class="chip b">why (what people say)</span>. You need both.</p>
+  </section>
+
+  <!-- ================= 3: the company's own numbers ================= -->
+  <section class="slide s3">
+    <div class="shead auto"><span class="stag">Step 2 of 4</span><h2 class="serif">Start with the company's own numbers</h2></div>
+    <p class="lead auto d1">Companies that sell shares publicly report results every quarter, usually on an "Investors" page. Duolingo's <a href="https://investors.duolingo.com/news-releases/news-release-details/duolingo-achieves-54-dau-growth-and-40-revenue-growth-third" target="_blank" rel="noopener">results for the third quarter of 2024</a> reported:</p>
+    <div class="stats auto d2">
+      <div class="stat dau"><b>37.2 million</b><span>daily active users</span></div>
+      <div class="stat"><b>113.1 million</b><span>monthly active users</span></div>
+    </div>
+    <div class="ratio auto d3 padr">
+      <div class="three" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
+      <p>That's a DAU/MAU of about <b>33%</b>: roughly one in three monthly users opening the app on a given day.</p>
+    </div>
+  </section>
+
+  <!-- ================= 4: credibility check ================= -->
+  <section class="slide s4">
+    <div class="shead auto"><span class="stag">Step 2 of 4</span><h2 class="serif">Now run the credibility check:</h2></div>
+    <table class="check auto d1">
+      <tr><td>Who measured it?</td><td style="transition-delay:.7s">Duolingo itself</td></tr>
+      <tr><td>When?</td><td style="transition-delay:1.1s">July–September 2024</td></tr>
+      <tr><td>Reported or estimated?</td><td style="transition-delay:1.5s">Reported: the company's own count</td></tr>
+      <tr><td>Does a second source agree?</td><td style="transition-delay:1.9s">Not yet known. That's Step 3.</td></tr>
+    </table>
+    <p class="ok auto d4">✅ Credible as <b>Duolingo's own claim</b>, with a clear date. But it's still one kind of source.</p>
+    <p class="pin auto d4 padr">📌 <b>Private companies</b> like BeReal don't have to publish quarterly results. That's why its numbers come from occasional announcements and interviews, and why a second source matters even more.</p>
+  </section>
+
+  <!-- ================= 5: what counts as a second source ================= -->
+  <section class="slide s5">
+    <div class="shead auto"><span class="stag">Step 3 of 4</span><h2 class="serif">Look for a second source</h2></div>
+    <p class="lead auto d1">A second source only counts if it's <b>independent</b>: it measured or found the number itself, rather than repeating someone else's.</p>
+    <div class="ind auto d2 padr" aria-hidden="true">
+      <div class="case">
+        <svg viewBox="0 0 300 120">
+          <rect x="10" y="40" width="96" height="44" rx="10" fill="#18DD4C" stroke="#000" stroke-width="3"/>
+          <text x="58" y="68" text-anchor="middle" font-family="Inter" font-size="15" font-weight="800">company</text>
+          <path d="M110 62 H182" stroke="#000" stroke-width="3" stroke-dasharray="6 5"/>
+          <path d="M174 54 L184 62 L174 70" fill="none" stroke="#000" stroke-width="3"/>
+          <rect x="190" y="40" width="96" height="44" rx="10" fill="#FFFFFF" stroke="#000" stroke-width="3"/>
+          <text x="238" y="68" text-anchor="middle" font-family="Inter" font-size="15" font-weight="800">article</text>
+          <text x="146" y="44" text-anchor="middle" font-family="Inter" font-size="13" font-weight="700">same number</text>
+        </svg>
+        <span class="verdict">✗ Repeats it: not a second source</span>
+      </div>
+      <div class="case yes">
+        <svg viewBox="0 0 300 120">
+          <rect x="10" y="12" width="110" height="40" rx="10" fill="#18DD4C" stroke="#000" stroke-width="3"/>
+          <text x="65" y="37" text-anchor="middle" font-family="Inter" font-size="15" font-weight="800">company</text>
+          <rect x="10" y="70" width="110" height="40" rx="10" fill="#B5F7C9" stroke="#000" stroke-width="3"/>
+          <text x="65" y="95" text-anchor="middle" font-family="Inter" font-size="14" font-weight="800">measurer</text>
+          <path d="M124 32 C 170 32, 180 60, 214 60 M124 90 C 170 90, 180 60, 214 60" fill="none" stroke="#000" stroke-width="3"/>
+          <circle cx="240" cy="60" r="26" fill="#FFFFFF" stroke="#000" stroke-width="3"/>
+          <path d="M228 60 L237 69 L253 51" fill="none" stroke="#07A657" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="verdict">✓ Measured on its own: counts</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 6: three kinds of source ================= -->
+  <section class="slide s6">
+    <div class="shead auto"><span class="stag">Step 3 of 4</span><h2 class="serif">Kinds of second source</h2></div>
+    <div class="srcs">
+      <div class="src auto d1">
+        <h3>Measurement firms</h3>
+        <span class="k">Where to look</span><span><a href="https://sensortower.com" target="_blank" rel="noopener">Sensor Tower</a>, <a href="https://www.statista.com" target="_blank" rel="noopener">Statista</a></span>
+        <span class="k">Good for</span><span>Trends over time, comparing apps</span>
+        <span class="warn"><b>Watch out:</b> They're <b>estimates</b>, not exact counts. Some need a free account.</span>
+      </div>
+      <div class="src auto d2">
+        <h3>Press</h3>
+        <span class="k">Where to look</span><span>News search for "[app] daily active users"</span>
+        <span class="k">Good for</span><span>Context, interviews with leaders</span>
+        <span class="warn"><b>Watch out:</b> Articles often <b>repeat the company's number</b>, which doesn't make it a second source</span>
+      </div>
+      <div class="src auto d3">
+        <h3>AI research tools</h3>
+        <span class="k">Where to look</span><span>Perplexity, with citations turned on</span>
+        <span class="k">Good for</span><span>Finding articles and reports fast</span>
+        <span class="warn"><b>Watch out:</b> <b>Never take a number from the AI's answer.</b> Click through to the original source every time.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 7: AI research prompts ================= -->
+  <section class="slide s7">
+    <div class="shead auto"><span class="stag">Step 3 of 4</span><h2 class="serif">Good prompts for an AI research tool:</h2></div>
+    <div class="prompt auto d1"><span class="mono">"What are the most recent news articles about Duolingo's daily active users, with citations?"</span><span class="send" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9 H15 M10 4 L15 9 L10 14" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    <div class="prompt auto d2"><span class="mono">"Summarize analyst opinions on Duolingo's user retention and engagement, with citations."</span><span class="send" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9 H15 M10 4 L15 9 L10 14" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    <p class="always auto d3 padr">Always click through to the original article to verify details. That habit is what separates surface-level research from credible analysis.</p>
+  </section>
+
+  <!-- ================= 8: where users talk ================= -->
+  <section class="slide s8">
+    <div class="shead auto"><span class="stag">Step 4 of 4</span><h2 class="serif">Find the "why" in what users say</h2></div>
+    <p class="lead auto d1">Numbers tell you <em>how many</em>. Users tell you <em>why</em>. The best free places to hear them:</p>
+    <div class="places padr">
+      <div class="place auto d2">
+        <h3>⭐ App Store and Google Play reviews</h3>
+        <span class="k">How to search</span><span>Open the app's page, then sort by <b>Most recent</b></span>
+        <span class="tip"><b>Tip:</b> Recent reviews describe the app as it is now, not as it was years ago</span>
+      </div>
+      <div class="place auto d3">
+        <h3>💬 Reddit</h3>
+        <span class="k">How to search</span><span>Search the app's name, or its own community (Duolingo has r/duolingo)</span>
+        <span class="tip"><b>Tip:</b> Look for long posts about daily habits, not just quick complaints</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 9: for each quote ================= -->
+  <section class="slide s9">
+    <div class="left">
+      <h3 class="auto">For each quote you keep:</h3>
+      <div class="steps3 auto d1">
+        <div><span class="n">1</span><span><b>Copy it word for word.</b> Don't paraphrase.</span></div>
+        <div><span class="n">2</span><span><b>Save the link and the date.</b></span></div>
+        <div><span class="n">3</span><span><b>Tag it with a short theme</b> in your own words, like "streak pressure" or "lessons feel too easy".</span></div>
+      </div>
+      <p class="bot auto d3">🤖 AI can help <b>sort</b> a pile of quotes into themes. But check that every quote really exists at its link, because AI sometimes invents them.</p>
+    </div>
+    <div class="qdemo auto d2" aria-hidden="true">
+      <span class="lbl">A quote, ready for your organizer</span>
+      <span class="bar" style="width:92%"></span><span class="bar" style="width:84%"></span><span class="bar" style="width:60%"></span>
+      <div class="tagrow">
+        <span class="tg" style="transition-delay:1.4s">“ word for word ”</span>
+        <span class="tg" style="transition-delay:1.8s">🔗 link · 📅 date</span>
+        <span class="tg t3" style="transition-delay:2.2s"># streak pressure</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true">
+    <path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+    <line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/>
+  </svg>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd');
+  const back = document.getElementById('back');
+  const hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    fwd.classList.toggle('hidden', current === slides.length - 1);
+    fwd.classList.toggle('on-green', slides[current].dataset.bg === 'green');
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1) handTimer = setTimeout(() => hand.style.opacity = 1, 2600);
+  }
+
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => go(0));
+  window.addEventListener('resize', fit);
+
+  // preview helper: open with #2 … #9 to start on that slide
+  const start = parseInt(location.hash.slice(1), 10);
+  go(start >= 1 && start <= slides.length ? start - 1 : 0);
+</script>
+</body>
+</html>
