@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find Data: What Good Looks Like</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4;
+    --green: #18DD4C; --green-dark: #07A657; --green-50: #ECFDF1; --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+
+  /* top bar */
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .menu-btn { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px 0 12px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 16px; font-weight: 700; transition: opacity .3s; }
+  .menu-btn:hover { background: var(--gray); }
+  .jump { margin-left: auto; margin-right: 12px; display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 16px; font-weight: 800; box-shadow: 0 3px 0 var(--black); white-space: nowrap; }
+  .jump:hover { background: var(--black); color: var(--white); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  .menu-btn:focus-visible, .restart:focus-visible, .pick:focus-visible, .jump:focus-visible, .stab:focus-visible, .fwd:focus-visible, a:focus-visible { outline: 3px solid var(--black); outline-offset: 4px; }
+
+  a { color: var(--black); font-weight: 700; text-decoration: underline; text-decoration-color: var(--green); text-decoration-thickness: 3px; text-underline-offset: 3px; }
+  a:hover { text-decoration-color: var(--black); }
+
+  /* pages fill the whole canvas; content sits below the top bar */
+  .page { position: absolute; inset: 0; padding: 66px 40px 24px; opacity: 0; pointer-events: none; transition: opacity .4s ease; overflow: hidden; display: flex; flex-direction: column; gap: 12px; }
+  .page.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .45s ease, transform .45s ease; }
+  .page.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .25s !important; } .d2 { transition-delay: .5s !important; } .d3 { transition-delay: .75s !important; }
+
+  /* forward arrow: steps through a page's parts */
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--green-dark); }
+  .fwd:hover svg path { stroke: var(--white); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+
+  /* hand: on the menu it sits in the next card not opened */
+  .hand { position: absolute; width: 58px; height: 64px; pointer-events: none; animation: tap 1.4s ease-in-out infinite; opacity: 0; transition: opacity .3s; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  .pick .hand { right: 8px; bottom: -14px; z-index: 3; }
+  .page.active .pick.next .hand { opacity: 1; transition: opacity .4s ease 1.2s; }
+
+  /* ---------- menu ---------- */
+  .p-menu { justify-content: center; gap: 20px; padding-bottom: 34px; }
+  .p-menu h2 { font-size: 52px; line-height: 1; }
+  .p-menu .lead { font-size: 21px; line-height: 1.45; }
+  .picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .pick { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; text-align: left; padding: 20px 20px 18px; border-radius: 22px; border: 3px solid var(--black); background: var(--white); cursor: pointer; font: inherit; color: inherit; min-height: 200px; box-shadow: 7px 7px 0 var(--gray); transition: transform .15s, box-shadow .15s; }
+  .pick:hover { transform: translate(-2px,-2px); box-shadow: 9px 9px 0 var(--black); }
+  .pick .ico { width: 60px; height: 60px; border-radius: 16px; border: 2.5px solid var(--black); background: var(--soft); display: flex; align-items: center; justify-content: center; font-size: 30px; }
+  .pick .name { font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.05; }
+  .pick .sub { font-size: 14px; font-weight: 700; margin-top: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .pick .sub span { padding: 3px 9px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); }
+  .pick .seen { position: absolute; top: -14px; right: -14px; width: 40px; height: 40px; border-radius: 50%; background: var(--black); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; transform: scale(0); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+  .pick.visited .seen { transform: scale(1); }
+  .duo { font-size: 18px; line-height: 1.45; padding: 10px 14px; border-radius: 12px; background: var(--soft); border: 1.5px solid var(--gray); }
+
+  /* ---------- page header + part tabs ---------- */
+  .phead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .phead h2 { font-size: 32px; line-height: 1.05; margin-right: 4px; }
+  .score { display: inline-flex; padding: 4px 11px; border-radius: 999px; border: 2.5px solid var(--black); font-size: 14px; font-weight: 800; background: var(--white); }
+  .stabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .stab { font: inherit; font-size: 15px; font-weight: 700; padding: 5px 12px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; }
+  .stab[aria-selected="true"] { background: var(--black); color: var(--white); }
+  .stab.seen:not([aria-selected="true"]) { background: var(--gray); }
+
+  /* parts inside a page */
+  .parts { position: relative; flex: 1; min-height: 0; }
+  .part { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .part.on { opacity: 1; pointer-events: auto; }
+  .part .lbl { font-size: 14px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #444; }
+  .part .lbl em { text-transform: none; letter-spacing: 0; font-weight: 600; }
+  .q { font-size: 18px; line-height: 1.4; }
+
+  /* tables */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.3; background: var(--white); }
+  .tbl th { background: var(--gray); text-align: left; padding: 6px 8px; border: 2px solid var(--black); font-size: 16px; }
+  .tbl td { padding: 5px 7px; border: 2px solid var(--black); vertical-align: top; }
+  .tbl td.c, .tbl th.c { text-align: center; white-space: nowrap; }
+  .padr { margin-right: 104px; }
+
+  /* Box 3 as theme cards: one card per grid row, so eight columns stay readable */
+  .theme { border: 2.5px solid var(--black); border-radius: 14px; overflow: hidden; background: var(--white); }
+  .theme .th { padding: 7px 12px; background: var(--soft); border-bottom: 2px solid var(--black); font-size: 17px; font-weight: 800; display: flex; gap: 10px; align-items: baseline; }
+  .theme .th small { font-size: 14px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: .06em; }
+  .srcs { display: grid; grid-template-columns: repeat(6, 1fr); }
+  .srcs div { padding: 6px 8px; border-right: 1.5px solid var(--gray); font-size: 16px; line-height: 1.3; min-height: 64px; }
+  .srcs div:last-child { border-right: none; }
+  .srcs div b { display: block; font-size: 14px; font-weight: 800; color: #444; margin-bottom: 3px; line-height: 1.2; }
+  .srcs div.tick { background: var(--soft); }
+  .theme .pat { padding: 7px 12px; border-top: 2px solid var(--black); font-size: 17px; line-height: 1.4; }
+  .theme .pat b.k { font-size: 14px; font-weight: 800; color: #444; text-transform: uppercase; letter-spacing: .06em; margin-right: 6px; }
+
+  /* quoted answers */
+  .ans { border: 2.5px solid var(--black); border-radius: 14px; background: var(--white); padding: 10px 14px; font-size: 18px; line-height: 1.45; }
+  .ans b.k { display: block; font-size: 14px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #444; margin-bottom: 4px; }
+
+  /* score annotations */
+  .ann { border-radius: 14px; padding: 10px 14px; font-size: 18px; line-height: 1.42; border: 2.5px solid var(--black); background: var(--white); }
+  .ann b.crit { display: inline-block; padding: 1px 10px; border-radius: 999px; margin-right: 6px; font-size: 15px; border: 2px solid var(--black); }
+  .good .ann b.crit { background: var(--black); color: var(--white); }
+  .bad .ann b.crit { background: var(--gray); }
+  .oneline { font-size: 18px; line-height: 1.42; padding: 10px 14px; border-left: 6px solid var(--black); background: var(--soft); }
+
+  /* ---------- rubric: one criterion at a time ---------- */
+  .crit-q { border: 3px solid var(--black); border-radius: 16px; padding: 14px 18px; box-shadow: 7px 7px 0 var(--gray); }
+  .crit-q .k { font-size: 14px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #444; }
+  .crit-q p { font-family: 'DM Serif Text', serif; font-size: 28px; line-height: 1.2; margin-top: 4px; }
+  .levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .lvl { border: 2.5px solid var(--black); border-radius: 14px; overflow: hidden; background: var(--white); display: flex; flex-direction: column; }
+  .lvl .lh { padding: 7px 12px; font-size: 16px; font-weight: 800; border-bottom: 2px solid var(--black); }
+  .lvl.l0 .lh { background: var(--white); }
+  .lvl.l1 .lh { background: var(--gray); }
+  .lvl.l2 .lh { background: var(--black); color: var(--white); }
+  .lvl .lb { padding: 10px 12px; font-size: 17px; line-height: 1.42; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <button class="menu-btn hidden" id="toMenu" type="button" aria-label="Back to the menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Menu
+    </button>
+    <button class="jump hidden" id="jump" type="button"></button>
+    <button class="restart" id="restart" type="button">↺ Start over</button>
+  </div>
+
+  <!-- ================= Menu ================= -->
+  <section class="page p-menu active" id="menu" aria-live="polite">
+    <h2 class="serif auto">What Good Looks Like</h2>
+    <p class="lead auto d1">This task is checked against three criteria from the rubric:</p>
+    <div class="picks auto d2">
+      <button class="pick" type="button" data-go="rubric"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">📏</span><span class="name">The rubric</span><span class="sub"><span>Specific</span><span>Connected</span><span>Committed</span></span></button>
+      <button class="pick" type="button" data-go="good"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">✅</span><span class="name">Strong example</span><span class="sub"><span>2 · 2 · 2</span></span></button>
+      <button class="pick" type="button" data-go="bad"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">❌</span><span class="name">Not-yet example</span><span class="sub"><span>0 · 0 · 0</span></span></button>
+    </div>
+    <p class="duo auto d3">📌 These examples use <b>Duolingo</b>, the app from the training walkthrough, so you can see what the rubric looks for. The person filling them in did a teardown of Duolingo first. Your organizer will be about BeReal.</p>
+  </section>
+
+  <!-- ================= Rubric ================= -->
+  <section class="page" id="rubric">
+    <div class="phead auto"><h2 class="serif">📏 The rubric</h2></div>
+    <div class="stabs auto" role="tablist"></div>
+    <div class="parts">
+      <div class="part" data-tab="Specific">
+        <div class="crit-q"><span class="k">Specific · The test question</span><p>Could someone find the exact number or quote you mean?</p></div>
+        <div class="levels padr">
+          <div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">Vague claims, no figures or dates</span></div>
+          <div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Some numbers have an exact figure and a date, but others are rounded, undated, or quotes are paraphrased</span></div>
+          <div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">Every number has its exact figure, its date, and whether it's <b>reported or estimated</b>. Every quote is copied word for word.</span></div>
+        </div>
+      </div>
+      <div class="part" data-tab="Connected">
+        <div class="crit-q"><span class="k">Connected · The test question</span><p>Can a reader trace every number, quote, and ✓ back to its source?</p></div>
+        <div class="levels padr">
+          <div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">No links, or ✓ marks with nothing behind them</span></div>
+          <div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Most items are linked, but some ✓ marks or numbers can't be traced, or no second source was checked</span></div>
+          <div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">Every number and quote links to its source, every number had a second source checked, and every ✓ points to a real row or teardown moment #</span></div>
+        </div>
+      </div>
+      <div class="part" data-tab="Committed">
+        <div class="crit-q"><span class="k">Committed · The test question</span><p>Do you make a clear call about what the data says, and how sure you are?</p></div>
+        <div class="levels padr">
+          <div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">Lists data without a verdict, or calls everything a "pattern"</span></div>
+          <div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Gives a verdict, but ignores the pattern rule or a conflict, or changes confidence without saying why</span></div>
+          <div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">Labels each theme 🟢 / 🟡 / 🔴 using the 3-source rule, picks backs up / complicates / contradicts with a reason, and updates confidence honestly</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Strong example ================= -->
+  <section class="page good" id="good">
+    <div class="phead auto">
+      <h2 class="serif">✅ Strong example</h2>
+      <span class="score">Specific 2</span><span class="score">Connected 2</span><span class="score">Committed 2</span>
+    </div>
+    <div class="stabs auto" role="tablist"></div>
+    <div class="parts">
+      <div class="part" data-tab="Box 1">
+        <p class="q"><b>My question:</b> <em>Are people coming back to Duolingo every day and every month, and why or why not?</em></p>
+        <span class="lbl">Box 1: The numbers</span>
+        <table class="tbl">
+          <colgroup><col style="width:11%"><col style="width:12%"><col style="width:18%"><col style="width:12%"><col style="width:17%"><col style="width:30%"></colgroup>
+          <tr><th>Number</th><th>What it measures</th><th>Source + link</th><th>Date</th><th>Reported or estimated?</th><th>A second source agrees?</th></tr>
+          <tr><td>37.2 million</td><td>DAU</td><td><a href="https://investors.duolingo.com/news-releases/news-release-details/duolingo-achieves-54-dau-growth-and-40-revenue-growth-third" target="_blank" rel="noopener">Duolingo Q3 2024 results</a></td><td>Jul–Sep 2024</td><td>Reported</td><td>✗ Only found repeats of Duolingo's own figure (TipRanks, SEC filing), so not independent</td></tr>
+          <tr><td>113.1 million</td><td>MAU</td><td>Same release</td><td>Jul–Sep 2024</td><td>Reported</td><td>✗ Same as above</td></tr>
+          <tr><td>≈33%</td><td>DAU ÷ MAU</td><td>My calculation from the two rows above</td><td>Jul–Sep 2024</td><td>Calculated</td><td>n/a: depends on the rows above</td></tr>
+        </table>
+      </div>
+      <div class="part" data-tab="Box 2a">
+        <span class="lbl">Box 2: What users say <em>(excerpt: 7 quotes shown here; a full organizer has 10–15)</em></span>
+        <table class="tbl">
+          <colgroup><col style="width:5%"><col style="width:40%"><col style="width:19%"><col style="width:12%"><col style="width:14%"><col style="width:10%"></colgroup>
+          <tr><th class="c">#</th><th>Quote (copied exactly)</th><th>Where</th><th>Date</th><th>Theme</th><th class="c">👍/👎</th></tr>
+          <tr><td class="c">1</td><td>People hate the energy system</td><td>Reddit</td><td></td><td>Bad</td><td class="c">👎</td></tr>
+          <tr><td class="c">2</td><td>Users love their streaks</td><td>App Store</td><td></td><td>Good</td><td class="c">👍</td></tr>
+        </table>
+      </div>
+      <div class="part" data-tab="Box 2b">
+        <span class="lbl">Box 2: What users say <em>(continued)</em></span>
+        <table class="tbl">
+          <colgroup><col style="width:5%"><col style="width:40%"><col style="width:19%"><col style="width:12%"><col style="width:14%"><col style="width:10%"></colgroup>
+          <tr><th class="c">#</th><th>Quote (copied exactly)</th><th>Where</th><th>Date</th><th>Theme</th><th class="c">👍/👎</th></tr>
+          <tr><td class="c">3</td><td>"I also love that the widget feature gently reminds you every day with a little owl humor to practice and that has been EXTREMELY helpful for me when I have so many other notifications on my phone."</td><td>App Store review, "Really easy and nice features"</td><td>12/09/2025</td><td>Daily habit (reminders)</td><td class="c">👍</td></tr>
+          <tr><td class="c">4</td><td>"…I cannot think of a better way to start my day than a quick Spanish lesson. But then I am sucked in."</td><td>App Store review, "Careful: Habit forming."</td><td>Apr 12 (year not shown)</td><td>Daily habit</td><td class="c">👍</td></tr>
+        </table>
+      </div>
+      <div class="part" data-tab="Box 2c">
+        <span class="lbl">Box 2: What users say <em>(continued)</em></span>
+        <table class="tbl">
+          <colgroup><col style="width:5%"><col style="width:40%"><col style="width:19%"><col style="width:12%"><col style="width:14%"><col style="width:10%"></colgroup>
+          <tr><th class="c">#</th><th>Quote (copied exactly)</th><th>Where</th><th>Date</th><th>Theme</th><th class="c">👍/👎</th></tr>
+          <tr><td class="c">5</td><td>"…if you have super Duolingo, you get unlimited, unlimited energy, which is amazing because I love just doing a bunch of lessons"</td><td>App Store review, "Amazing"</td><td>May 29 (year not shown)</td><td>Energy (paid users)</td><td class="c">👍</td></tr>
+          <tr><td class="c">6</td><td>"When doing full lessons, I run out of energy during the third lesson, even if I haven't made any mistakes."</td><td><a href="https://www.androidauthority.com/quitting-duolingo-energy-system-3599842/" target="_blank" rel="noopener">Android Authority, Megan Ellis</a></td><td>Oct 1, 2025</td><td>Energy (free users)</td><td class="c">👎</td></tr>
+          <tr><td class="c">7</td><td>"…now over 700 days into my streak, I'm finally quitting Duolingo due to the app's introduction of a new energy system."</td><td>Same article</td><td>Oct 1, 2025</td><td>Energy (free users)</td><td class="c">👎</td></tr>
+        </table>
+      </div>
+      <div class="part" data-tab="Box 3a">
+        <span class="lbl">Box 3: The triangulation grid <em>(one card per row of the grid)</em></span>
+        <div class="theme">
+          <div class="th"><small>Theme</small>A daily habit brings people back</div>
+          <div class="srcs">
+            <div class="tick"><b>Duolingo's own data</b>✓ DAU ÷ MAU ≈ 33% (Box 1, row 3)</div>
+            <div><b>Measurement firms</b>not checked</div>
+            <div><b>Press</b></div>
+            <div class="tick"><b>App reviews</b>✓ #3, #4</div>
+            <div><b>Reddit</b>couldn't access</div>
+            <div class="tick"><b>My teardown</b>✓ moment #2</div>
+          </div>
+          <div class="pat"><b class="k">Pattern?</b>🟢 <b>Pattern</b> (3 kinds)</div>
+        </div>
+      </div>
+      <div class="part" data-tab="Box 3b">
+        <span class="lbl">Box 3: The triangulation grid <em>(continued)</em></span>
+        <div class="theme">
+          <div class="th"><small>Theme</small>Energy limits push free users away</div>
+          <div class="srcs">
+            <div><b>Duolingo's own data</b></div>
+            <div><b>Measurement firms</b>not checked</div>
+            <div class="tick"><b>Press</b>✓ #6, #7</div>
+            <div><b>App reviews</b>✗ #5 loves energy, but they pay</div>
+            <div><b>Reddit</b>couldn't access</div>
+            <div class="tick"><b>My teardown</b>✓ moment #7</div>
+          </div>
+          <div class="pat"><b class="k">Pattern?</b>🟡 <b>Signal</b> + 🔴 <b>conflict</b>: press and I agree; the one review is from a paying user. I trust the split: the problem looks specific to <b>free</b> users.</div>
+        </div>
+        <div class="theme padr">
+          <div class="th"><small>Theme</small>Ads annoy</div>
+          <div class="srcs">
+            <div><b>Duolingo's own data</b></div>
+            <div><b>Measurement firms</b>not checked</div>
+            <div><b>Press</b></div>
+            <div class="tick"><b>App reviews</b>✓ #2</div>
+            <div><b>Reddit</b>couldn't access</div>
+            <div><b>My teardown</b></div>
+          </div>
+          <div class="pat"><b class="k">Pattern?</b>🟡 <b>Signal</b> (1 kind)</div>
+        </div>
+      </div>
+      <div class="part" data-tab="Box 4">
+        <span class="lbl">Box 4: So what?</span>
+        <div class="ans"><b class="k">My broken moment (moment #7)</b><em>"In my third lesson, with no mistakes, my energy ran out. My only options were an ad, gems, or paying."</em></div>
+        <div class="ans"><b class="k">The data: ☑ complicates it</b>because <em>it's a signal, not a pattern. Press and I agree, but the only review that mentions energy is from someone who pays and loves it. The problem looks real for <b>free</b> users, not everyone.</em></div>
+        <div class="ans padr"><b class="k">My MAU bet: confidence ☑ ⬇️ gone down</b>because <em>I'd bet fixing energy would help MAU across the board. The data suggests it mainly affects free users, so I'd narrow my bet to them.</em></div>
+      </div>
+      <div class="part" data-tab="Scores">
+        <span class="lbl">How it scores</span>
+        <div class="ann"><b class="crit">Specific: 2</b> Every number has its exact figure, date, and "reported" or "calculated". Every quote is copied word for word, with "year not shown" where the page didn't give one.</div>
+        <div class="ann"><b class="crit">Connected: 2</b> Every number and quote links to its source. The second-source column honestly says the repeats aren't independent. Every ✓ points to a Box 1 row, a Box 2 #, or a teardown moment. Reddit is marked "couldn't access", not left blank.</div>
+        <div class="ann padr"><b class="crit">Committed: 2</b> Only one theme is called a pattern, and it has 3 kinds of source. The energy theme is honestly a signal with a conflict, and the extern says which side they trust. The verdict ("complicates") and the lower confidence both come with a reason.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Not-yet example ================= -->
+  <section class="page bad" id="bad">
+    <div class="phead auto">
+      <h2 class="serif">❌ Not-yet example</h2>
+      <span class="score">Specific 0</span><span class="score">Connected 0</span><span class="score">Committed 0</span>
+    </div>
+    <div class="stabs auto" role="tablist"></div>
+    <div class="parts">
+      <div class="part" data-tab="Boxes 1–2">
+        <span class="lbl">Box 1: The numbers</span>
+        <table class="tbl">
+          <tr><th>Number</th><th>What it measures</th><th>Source + link</th><th>Date</th><th>Reported or estimated?</th><th>A second source agrees?</th></tr>
+          <tr><td>100M+</td><td>Users</td><td>Google</td><td></td><td></td><td class="c">✓</td></tr>
+        </table>
+        <span class="lbl" style="margin-top:8px">Box 2: What users say</span>
+        <table class="tbl padr">
+          <tr><th class="c">#</th><th>Quote</th><th>Where</th><th>Date</th><th>Theme</th><th class="c">👍/👎</th></tr>
+          <tr><td class="c">1</td><td>People hate the energy system</td><td>Reddit</td><td></td><td>Bad</td><td class="c">👎</td></tr>
+          <tr><td class="c">2</td><td>Users love their streaks</td><td>App Store</td><td></td><td>Good</td><td class="c">👍</td></tr>
+        </table>
+      </div>
+      <div class="part" data-tab="Boxes 3–4">
+        <span class="lbl">Box 3: The triangulation grid</span>
+        <div class="theme">
+          <div class="th"><small>Theme</small>Energy is bad</div>
+          <div class="srcs">
+            <div class="tick"><b>Duolingo's own data</b>✓</div>
+            <div class="tick"><b>Measurement firms</b>✓</div>
+            <div class="tick"><b>Press</b>✓</div>
+            <div class="tick"><b>App reviews</b>✓</div>
+            <div class="tick"><b>Reddit</b>✓</div>
+            <div class="tick"><b>My teardown</b>✓</div>
+          </div>
+          <div class="pat"><b class="k">Pattern?</b>🟢 Pattern</div>
+        </div>
+        <span class="lbl" style="margin-top:8px">Box 4: So what?</span>
+        <div class="ans padr"><em>"The data backs it up because everyone hates the energy system. I'm more confident now."</em></div>
+      </div>
+      <div class="part" data-tab="Scores">
+        <span class="lbl">How it scores</span>
+        <div class="ann"><b class="crit">Specific: 0</b> "100M+ users" has no date, doesn't say whether it's daily or monthly, and doesn't say reported or estimated. The "quotes" are the extern's own summaries, not users' words.</div>
+        <div class="ann"><b class="crit">Connected: 0</b> "Google" and "Reddit" aren't links. Every box in the grid is ticked, but none points to a row, including sources the extern never collected.</div>
+        <div class="ann padr"><b class="crit">Committed: 0</b> Calling everything a pattern isn't a judgment. "Everyone hates it" ignores that the extern never looked for anyone who likes it, and "more confident" has no reason behind it.</div>
+        <p class="oneline padr"><b>The difference in one line:</b> the strong example tells you exactly how much to trust each finding. The not-yet example sounds certain about everything, so you can't trust any of it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- forward arrow (steps through a page's parts) -->
+  <button class="fwd hidden" id="fwd" type="button" aria-label="Next part">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+
+  const pages = [...document.querySelectorAll('.page')];
+  const picks = [...document.querySelectorAll('.pick')];
+  const toMenu = document.getElementById('toMenu');
+  const jump = document.getElementById('jump');
+  const fwd = document.getElementById('fwd');
+  const visited = new Set();
+  const JUMPS = { rubric: ['good', 'See the strong example →'], good: ['bad', 'See the not-yet example →'], bad: ['good', '← See the strong example'] };
+
+  // the rubric and each example are a short series of parts, with tabs across the top
+  const series = {};
+  ['rubric', 'good', 'bad'].forEach(id => {
+    const page = document.getElementById(id);
+    const parts = [...page.querySelectorAll('.part')];
+    const tabs = page.querySelector('.stabs');
+    tabs.innerHTML = parts.map((p, i) => `<button class="stab" type="button" role="tab" data-i="${i}">${p.dataset.tab}</button>`).join('');
+    const btns = [...tabs.querySelectorAll('.stab')];
+    series[id] = { parts, btns, i: 0 };
+    btns.forEach(b => b.addEventListener('click', () => showPart(id, +b.dataset.i)));
+  });
+  function showPart(id, i) {
+    const s = series[id];
+    s.i = i;
+    s.parts.forEach((p, k) => p.classList.toggle('on', k === i));
+    s.btns.forEach((b, k) => { b.setAttribute('aria-selected', k === i ? 'true' : 'false'); if (k === i) b.classList.add('seen'); });
+    fwd.classList.toggle('hidden', i === s.parts.length - 1);
+  }
+
+  function markNext() {
+    const next = picks.find(p => !visited.has(p.dataset.go));
+    picks.forEach(p => p.classList.toggle('next', p === next));
+  }
+
+  let currentId = 'menu';
+  function show(id) {
+    currentId = id;
+    pages.forEach(p => p.classList.toggle('active', p.id === id));
+    toMenu.classList.toggle('hidden', id === 'menu');
+    jump.classList.toggle('hidden', !JUMPS[id]);
+    if (JUMPS[id]) { jump.dataset.go = JUMPS[id][0]; jump.textContent = JUMPS[id][1]; }
+    if (series[id]) showPart(id, 0); else fwd.classList.add('hidden');
+    if (id !== 'menu') { visited.add(id); picks.forEach(p => p.classList.toggle('visited', visited.has(p.dataset.go))); }
+    markNext();
+  }
+
+  picks.forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+  jump.addEventListener('click', () => show(jump.dataset.go));
+  toMenu.addEventListener('click', () => show('menu'));
+  fwd.addEventListener('click', () => { const s = series[currentId]; if (s && s.i < s.parts.length - 1) showPart(currentId, s.i + 1); });
+  document.getElementById('restart').addEventListener('click', () => {
+    visited.clear(); picks.forEach(p => p.classList.remove('visited'));
+    Object.values(series).forEach(s => s.btns.forEach(b => b.classList.remove('seen')));
+    show('menu');
+  });
+  window.addEventListener('resize', fit);
+
+  // preview helper: #rubric, #good, #bad; add -N to open part N (e.g. #good-3)
+  const m = location.hash.slice(1).match(/^(rubric|good|bad)(?:-(\d))?$/);
+  show(m ? m[1] : 'menu');
+  if (m && m[2] && series[m[1]]) showPart(m[1], parseInt(m[2], 10) - 1);
+</script>
+</body>
+</html>
