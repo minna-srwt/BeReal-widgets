@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find Data About BeReal Users</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4;
+    --green: #18DD4C; --green-dark: #07A657; --green-50: #ECFDF1; --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+
+  /* top bar */
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft { display: flex; align-items: center; gap: 14px; }
+  .topright { display: flex; align-items: center; gap: 10px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .tplbtn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: var(--white); border: 2.5px solid var(--black); color: var(--black); font-size: 16px; font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--black); white-space: nowrap; }
+  .tplbtn:hover { background: var(--black); color: var(--white); }
+  .tplbtn:hover svg path, .tplbtn:hover svg line { stroke: var(--white); }
+
+  /* slides */
+  .slide { position: absolute; inset: 0; padding: 66px 40px 26px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .35s !important; } .d2 { transition-delay: .7s !important; } .d3 { transition-delay: 1.05s !important; } .d4 { transition-delay: 1.4s !important; } .d5 { transition-delay: 1.75s !important; }
+
+  a { color: var(--black); font-weight: 800; text-decoration: underline; text-decoration-color: var(--green); text-decoration-thickness: 3px; text-underline-offset: 3px; }
+  a:hover { text-decoration-color: var(--black); }
+
+  /* ---------- navigation ---------- */
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); }
+  .fwd:hover { background: var(--green-dark); }
+  .fwd:hover svg path { stroke: var(--white); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  .fwd:focus-visible, .back:focus-visible, .restart:focus-visible, .hbtn:focus-visible, .tplbtn:focus-visible, .colbtn:focus-visible, a:focus-visible { outline: 3px solid var(--black); outline-offset: 3px; }
+
+  .hand { position: absolute; right: 22px; bottom: 6px; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+
+  /* notes */
+  .check, .stuck { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; padding: 12px 16px; border-radius: 14px; font-size: 18px; line-height: 1.42; background: var(--white); }
+  .check { border: 2.5px solid var(--black); }
+  .stuck { border: 2px dashed var(--black); }
+  .check .ic, .stuck .ic { font-size: 20px; line-height: 1.3; }
+  .note { display: grid; grid-template-columns: 32px 1fr; gap: 10px; align-items: start; font-size: 18px; line-height: 1.45; padding: 11px 14px; border-radius: 14px; background: var(--soft); border: 1.5px solid var(--gray); }
+  .note .ic { font-size: 20px; line-height: 1.3; }
+
+  /* step layout: number rail + content */
+  .step { display: grid; grid-template-columns: 92px 1fr; column-gap: 24px; }
+  .rail { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+  .rail .num { width: 84px; height: 84px; border-radius: 20px; background: var(--white); border: 3px solid var(--black); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 54px; line-height: 1; box-shadow: 6px 6px 0 var(--gray); }
+  .rail .of { margin-top: 12px; font-size: 14px; font-weight: 800; letter-spacing: .02em; white-space: nowrap; text-transform: uppercase; text-align: center; line-height: 1.3; }
+  .rail .part { margin-top: 6px; font-size: 14px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--black); color: var(--white); white-space: nowrap; }
+  .rail .line { flex: 1; width: 4px; margin-top: 12px; background: repeating-linear-gradient(var(--gray) 0 10px, transparent 10px 18px); border-radius: 2px; }
+  .body { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding-right: 20px; }
+  .body h2 { font-size: 30px; line-height: 1.1; }
+  .body h3 { font-size: 21px; font-weight: 800; }
+  .body p { font-size: 19px; line-height: 1.48; }
+  .body .spacer { flex: 1; }
+  .pad { margin-right: 96px; }
+  .kicker { font-size: 17px; font-weight: 700; }
+
+  /* box preview: the organizer box, with tappable column headings */
+  .boxprev { border: 3px solid var(--black); border-radius: 14px; overflow: hidden; background: var(--white); }
+  .boxprev .bt { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 2.5px solid var(--black); background: var(--soft); font-size: 16px; font-weight: 800; }
+  .boxprev .bt .n { width: 26px; height: 26px; border-radius: 50%; background: var(--black); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .boxprev .bt .tap { margin-left: auto; font-size: 14px; font-weight: 700; color: #444; }
+  .btable { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .btable th { padding: 0; border-right: 1.5px solid var(--black); border-bottom: 1.5px solid var(--black); vertical-align: stretch; }
+  .btable th:last-child, .btable td:last-child { border-right: none; }
+  .colbtn { width: 100%; height: 100%; min-height: 58px; padding: 6px 7px; border: none; background: var(--white); font: inherit; font-size: 16px; font-weight: 800; line-height: 1.22; text-align: left; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; cursor: pointer; display: flex; align-items: flex-start; gap: 4px; }
+  .colbtn:hover { background: var(--soft); }
+  .colbtn.on { background: var(--black); color: var(--white); }
+  .colbtn { position: relative; }
+  .colbtn.seen:not(.on)::after { content: "✓"; position: absolute; right: 3px; bottom: 2px; font-size: 14px; color: var(--green-dark); font-weight: 800; }
+  /* Box 3 has eight columns: let each take its natural width so no heading collides */
+  .boxprev.b3 .btable { table-layout: auto; }
+  .boxprev.b3 .colbtn { padding: 6px 3px 16px; hyphens: manual; -webkit-hyphens: manual; overflow-wrap: normal; }
+  .body.full { padding-right: 0; }
+  .btable td { padding: 7px 7px; border-right: 1.5px solid var(--gray); border-bottom: 1.5px solid var(--gray); font-size: 16px; line-height: 1.3; height: 34px; }
+  .btable tr:last-child td { border-bottom: none; }
+  .btable td.yours { font-style: italic; font-weight: 700; }
+  .guide { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 10px 14px; border-radius: 12px; background: var(--soft); border: 1.5px solid var(--gray); font-size: 18px; line-height: 1.42; min-height: 52px; }
+  .guide b.k { white-space: nowrap; }
+  .guide ul { list-style: none; display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+
+  /* Box 4 preview */
+  .prompts { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 17px; line-height: 1.4; }
+  .prompts span { border-bottom: 1.5px dashed var(--gray); padding-bottom: 6px; }
+  .prompts span:last-child { border-bottom: none; padding-bottom: 0; }
+
+  /* numbered list cards */
+  .nlist { display: flex; flex-direction: column; gap: 8px; }
+  .nlist div { display: grid; grid-template-columns: 32px 1fr; gap: 10px; align-items: start; font-size: 18px; line-height: 1.42; }
+  .nlist .n { width: 30px; height: 30px; border-radius: 50%; background: var(--black); color: var(--white); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; }
+
+  /* search phrase chips */
+  .phrases { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .phrases span { display: flex; align-items: center; gap: 8px; border: 2px solid var(--black); border-radius: 999px; padding: 7px 14px; font-size: 17px; font-style: italic; background: var(--white); }
+  .phrases span::before { content: "🔍"; font-style: normal; }
+  .two { display: flex; flex-direction: column; gap: 6px; }
+  .two div { display: grid; grid-template-columns: 26px 1fr; gap: 8px; font-size: 19px; line-height: 1.42; }
+  .two div::before { content: "→"; font-weight: 800; }
+
+  /* help buttons */
+  .help { position: relative; display: flex; gap: 12px; padding-right: 110px; }
+  .hbtn { font: inherit; font-size: 16px; font-weight: 700; padding: 9px 16px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; }
+  .hbtn[aria-expanded="true"] { background: var(--black); color: var(--white); }
+  .pop { position: absolute; left: 0; right: 110px; bottom: calc(100% + 10px); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .25s, transform .25s; box-shadow: 0 8px 24px rgba(0,0,0,.15); z-index: 4; }
+  .pop.show { opacity: 1; transform: none; pointer-events: auto; }
+
+  /* ---------- map slides ---------- */
+  .m1 { display: grid; grid-template-columns: 1.25fr 1fr; column-gap: 34px; align-items: center; padding-bottom: 50px; }
+  .m1 .lead { font-size: 40px; line-height: 1.2; }
+  .m1 .lead b { font-weight: 400; border-bottom: 4px solid var(--black); }
+  .doc { justify-self: center; width: 100%; max-width: 300px; aspect-ratio: 3 / 4; background: var(--white); border: 3px solid var(--black); border-radius: 10px; box-shadow: 10px 10px 0 var(--gray); padding: 16px 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .doc .title { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .doc .title i { width: 10px; height: 10px; border-radius: 50%; background: var(--green); display: inline-block; }
+  .doc .qline { height: 8px; border-radius: 4px; background: var(--gray); width: 85%; }
+  .bx { flex: 1; border: 2.5px solid var(--black); border-radius: 8px; display: flex; align-items: center; gap: 10px; padding: 0 10px; opacity: 0; transform: scale(.94); transition: opacity .35s ease, transform .35s ease; }
+  .slide.active .bx { opacity: 1; transform: none; }
+  .bx .n { width: 26px; height: 26px; border-radius: 50%; background: var(--black); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex: none; }
+  .bx .lines { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+  .bx .lines span { height: 6px; border-radius: 3px; background: var(--gray); }
+  .bx.grid .lines { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+  .bx.grid .lines span { height: 12px; border-radius: 2px; }
+  .m2 { display: flex; flex-direction: column; justify-content: center; gap: 14px; padding-bottom: 26px; }
+  .map { display: grid; grid-template-columns: 1fr 120px; column-gap: 14px; }
+  .rows { display: flex; flex-direction: column; gap: 10px; }
+  .row { display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center; border: 2.5px solid var(--black); border-radius: 16px; padding: 12px 16px; background: var(--white); }
+  .row:nth-child(odd) { background: var(--soft); }
+  .row .n { width: 44px; height: 44px; border-radius: 50%; background: var(--black); color: var(--white); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 22px; }
+  .row .nm { font-size: 20px; font-weight: 800; line-height: 1.2; }
+  .row .what { display: block; font-size: 17px; line-height: 1.4; margin-top: 3px; }
+  .row .stp { font-size: 14px; font-weight: 800; padding: 5px 11px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); white-space: nowrap; }
+  .brackets { display: grid; grid-template-rows: 2fr 1fr 1fr; row-gap: 10px; }
+  .br { position: relative; display: flex; align-items: center; padding-left: 18px; font-family: 'DM Serif Text', serif; font-size: 22px; line-height: 1.1; }
+  .br::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 10px; border: 3px solid var(--black); border-left: none; border-radius: 0 8px 8px 0; }
+  .br.decide::before { border-color: var(--green-dark); }
+  .foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-right: 104px; }
+  .foot em { font-size: 21px; line-height: 1.4; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); font-weight: 700; font-size: 17px; white-space: nowrap; }
+  .qcard { border: 3px solid var(--black); border-radius: 18px; padding: 14px 18px; background: var(--white); box-shadow: 7px 7px 0 var(--gray); font-size: 22px; line-height: 1.35; }
+  .qcard em { font-family: 'DM Serif Text', serif; font-size: 24px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <a class="tplbtn tpl-link" href="#" target="_blank" rel="noopener">
+        <svg width="16" height="20" viewBox="0 0 16 20" aria-hidden="true"><path d="M1.5 1.5 h8.5 l4.5 4.5 v12.5 h-13 z" fill="#FFFFFF" stroke="#000" stroke-width="2" stroke-linejoin="round"/><line x1="4.5" y1="10" x2="11.5" y2="10" stroke="#000" stroke-width="2"/><line x1="4.5" y1="14" x2="11.5" y2="14" stroke="#000" stroke-width="2"/></svg>
+        Data Organizer ↗
+      </a>
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+
+  <!-- ================= Map 1: one doc, four boxes ================= -->
+  <section class="slide m1 active" aria-live="polite">
+    <p class="lead serif auto">Everything goes into one doc, the <b>BeReal Data Organizer</b>. It has four boxes, and you'll fill them in order:</p>
+    <div class="doc auto d1" role="img" aria-label="A one-page document with four boxes, numbered 1 to 4">
+      <span class="title"><i aria-hidden="true"></i>BeReal Data Organizer</span>
+      <span class="qline"></span>
+      <div class="bx grid" style="transition-delay:.9s"><span class="n">1</span><span class="lines"><span></span><span></span><span></span><span></span><span></span><span></span></span></div>
+      <div class="bx" style="transition-delay:1.2s"><span class="n">2</span><span class="lines"><span style="width:90%"></span><span style="width:70%"></span><span style="width:80%"></span></span></div>
+      <div class="bx grid" style="transition-delay:1.5s"><span class="n">3</span><span class="lines"><span></span><span></span><span></span><span></span><span></span><span></span></span></div>
+      <div class="bx" style="transition-delay:1.8s"><span class="n">4</span><span class="lines"><span style="width:85%"></span><span style="width:60%"></span></span></div>
+    </div>
+  </section>
+
+  <!-- ================= Map 2: the box map ================= -->
+  <section class="slide m2">
+    <div class="map">
+      <div class="rows">
+        <div class="row auto"><span class="n">1</span><span><span class="nm">Box 1: The Numbers</span><span class="what">2–3 numbers about daily or monthly users (the first is filled in for you)</span></span><span class="stp">Step 2</span></div>
+        <div class="row auto d1"><span class="n">2</span><span><span class="nm">Box 2: What Users Say</span><span class="what">10–15 quotes about the daily experience</span></span><span class="stp">Step 3</span></div>
+        <div class="row auto d2"><span class="n">3</span><span><span class="nm">Box 3: The Triangulation Grid</span><span class="what">Your themes, and which kinds of source show each one</span></span><span class="stp">Step 4</span></div>
+        <div class="row auto d3"><span class="n">4</span><span><span class="nm">Box 4: So What?</span><span class="what">What it all means for your teardown</span></span><span class="stp">Step 5</span></div>
+      </div>
+      <div class="brackets auto d4" aria-hidden="true">
+        <span class="br">collect</span><span class="br">compare</span><span class="br decide">decide</span>
+      </div>
+    </div>
+    <div class="foot auto d5"><em>Boxes 1 and 2 collect. Box 3 compares. Box 4 decides.</em><span class="chip">⏱️ About 60 minutes</span></div>
+  </section>
+
+  <!-- ================= Step 1 ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">1</div><div class="of">Step 1 of 6</div><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Copy the Organizer</h2>
+      <p class="auto d1">👉🏽 <a class="tpl-link" href="#" target="_blank" rel="noopener">Make a copy of the BeReal Data Organizer</a> (File → Make a copy), and rename it <em>"BeReal Data Organizer: [Your Name]"</em>.</p>
+      <p class="auto d1">Your question is already at the top of the doc:</p>
+      <p class="qcard auto d2"><b>My question:</b> <em>Are people coming back to BeReal every day and every month, and why or why not?</em></p>
+      <p class="auto d3">Every box below helps you answer one half of it: <b>how many</b> (Box 1) and <b>why</b> (Box 2).</p>
+      <div class="check auto d4 pad"><span class="ic">✅</span><span>You're on track if you can see Boxes 1–4 in your copy.</span></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 2a: Box 1 ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">2</div><div class="of">Step 2 of 6</div><span class="part">Box 1</span><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Fill In Box 1, The Numbers</h2>
+      <p class="kicker auto d1"><b>In your organizer, Box 1 looks like this.</b> The first row is already filled in for you, using what BeReal shared in the training:</p>
+      <div class="boxprev auto d1" data-box="1"></div>
+      <div class="guide auto d2" id="guide1"></div>
+      <p class="auto d3 pad" style="font-size:17px">These last four columns are the <b>credibility check</b> from the training: <em>Who measured it? When? Reported or estimated? Does a second source agree?</em></p>
+    </div>
+  </section>
+
+  <!-- ================= Step 2b: where BeReal's numbers live ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">2</div><div class="of">Step 2 of 6</div><span class="part">Box 1</span><div class="line"></div></div>
+    <div class="body">
+      <p class="auto">Your job: find <b>1–2 more numbers</b>, and make sure <b>at least one didn't come from BeReal itself.</b></p>
+      <h3 class="auto d1">Where BeReal's numbers actually live</h3>
+      <p class="auto d1">BeReal is a <b>private company</b>, so you won't find quarterly reports like Duolingo's. And measurement firms (like Sensor Tower or Similarweb) usually keep their numbers behind paid accounts.</p>
+      <p class="auto d2">So almost every number about BeReal reaches the public <b>through a news article.</b> When an article quotes a measurement firm:</p>
+      <div class="two auto d3 pad">
+        <div><span>record <b>the firm</b> as who measured it (that's your "Source")</span></div>
+        <div><span>use <b>the article</b> as your link</span></div>
+      </div>
+      <div class="note auto d4 pad"><span class="ic">🤖</span><span>AI research tools can help you <b>find</b> sources. <b>Never</b> copy a number from an AI's answer. Click through and copy it from the original.</span></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 2c: search phrases ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">2</div><div class="of">Step 2 of 6</div><span class="part">Box 1</span><div class="line"></div></div>
+    <div class="body">
+      <h3 class="auto">Search phrases to start with</h3>
+      <p class="auto" style="font-size:18px">Try these in a search engine:</p>
+      <div class="phrases auto d1"><span>BeReal daily active users</span><span>BeReal monthly active users</span><span>BeReal users Sensor Tower</span><span>BeReal users Similarweb</span></div>
+      <p class="auto d2" style="font-size:18px"><b>Expect numbers that disagree.</b> That isn't a mistake. It's a 🔴 conflict, and you'll use it in Box 3.</p>
+      <div class="note auto d2"><span class="ic">📌</span><span><b>Older numbers are fine.</b> A number from a few years ago still counts, as long as your Date column says so. Sometimes the only independent numbers are older ones.</span></div>
+      <p class="auto d3" style="font-size:17px">⏱️ Give yourself about <b>15 minutes</b> for this box.</p>
+      <div class="spacer"></div>
+      <div class="help auto d4" data-help="2"></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 3a: Box 2 ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">3</div><div class="of">Step 3 of 6</div><span class="part">Box 2</span><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Fill In Box 2, What Users Say</h2>
+      <p class="kicker auto d1"><b>In your organizer, Box 2 looks like this:</b></p>
+      <div class="boxprev auto d1" data-box="2"></div>
+      <div class="guide auto d2" id="guide2"></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 3b: where to find quotes ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">3</div><div class="of">Step 3 of 6</div><span class="part">Box 2</span><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Fill In Box 2, What Users Say</h2>
+      <p class="auto d1">Go to <b>BeReal's App Store or Google Play page</b> and sort reviews by <b>Most recent</b>. Then search Reddit for BeReal.</p>
+      <p class="auto d1">Collect <b>10–15 quotes about the daily experience</b>: the notification, posting, being late, friends, coming back. One quote per row.</p>
+      <div class="note auto d2"><span class="ic">🤖</span><span><em>AI allowed:</em> paste in your quotes and ask AI to suggest theme tags. Then <b>check that every quote really exists</b> at its link.</span></div>
+      <div class="spacer"></div>
+      <div class="help auto d3" data-help="3"></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 4: Box 3 ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">4</div><div class="of">Step 4 of 6</div><span class="part">Box 3</span><div class="line"></div></div>
+    <div class="body full">
+      <h2 class="serif auto">Fill In Box 3, The Triangulation Grid</h2>
+      <p class="kicker auto d1"><b>In your organizer, Box 3 looks like this.</b> This is where your collecting turns into an answer.</p>
+      <div class="boxprev b3 auto d1" data-box="3"></div>
+      <div class="guide auto d2" id="guide3"></div>
+      <div class="spacer"></div>
+      <div class="help auto d3" data-help="4"></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 5: Box 4 ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">5</div><div class="of">Step 5 of 6</div><span class="part">Box 4</span><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Fill In Box 4, So What?</h2>
+      <p class="kicker auto d1"><b>In your organizer, Box 4 looks like this:</b></p>
+      <div class="boxprev auto d1">
+        <div class="bt"><span class="n">4</span>Box 4: So What?</div>
+        <div class="prompts">
+          <span><b>My broken moment</b> (from my teardown, moment #___):</span>
+          <span><b>The data:</b> ☐ backs it up ☐ complicates it ☐ contradicts it, because:</span>
+          <span><b>My MAU bet:</b> my confidence has ☐ ⬆️ gone up ☐ ⬇️ gone down ☐ ➡️ stayed the same, because:</span>
+        </div>
+      </div>
+      <p class="auto d2" style="font-size:18px">Go back to your teardown and fill in the three prompts:</p>
+      <div class="nlist auto d2 pad">
+        <div><span class="n">1</span><span><b>My broken moment:</b> copy it from Part D of your teardown, with its moment #.</span></div>
+        <div><span class="n">2</span><span><b>The data:</b> tick one box, then explain why using the 🟢 / 🟡 / 🔴 labels from Box 3.</span></div>
+        <div><span class="n">3</span><span><b>My MAU bet:</b> tick one box, then explain what in Boxes 1–3 changed your confidence, or didn't.</span></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="help auto d3" data-help="5"></div>
+    </div>
+  </section>
+
+  <!-- ================= Step 6 ================= -->
+  <section class="slide step">
+    <div class="rail auto"><div class="num">6</div><div class="of">Step 6 of 6</div><div class="line"></div></div>
+    <div class="body">
+      <h2 class="serif auto">Submit Your Organizer</h2>
+      <p class="auto d1">Set your Google Doc to <b>"Anyone with the link can view"</b>, then submit the link below. You'll use it in the next step.</p>
+      <div class="check auto d2"><span class="ic">✅</span><span>You're on track if all four boxes are filled in, and every link opens.</span></div>
+    </div>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true">
+    <path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+    <line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/>
+  </svg>
+</div>
+
+<script>
+  // The BeReal Data Organizer Google Doc; /copy opens Google's "Make a copy" screen
+  const TEMPLATE_URL = 'https://docs.google.com/document/d/1M4VrJ9ZGLGvj2_a-BnULKw3jyweksRRdhvnO3EaxUmc/copy';
+  document.querySelectorAll('.tpl-link').forEach(a => a.href = TEMPLATE_URL);
+
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+
+  // Organizer boxes: column headings exactly as in the template, each with its "how to fill" text (word for word)
+  const BOXES = {
+    1: {
+      title: 'Box 1: The Numbers',
+      cols: [
+        ['Number', '<b class="k">Number:</b><span>the exact figure, as the source states it. No rounding.</span>'],
+        ['What it measures (DAU, MAU, trend…)', '<b class="k">What it measures:</b><span>DAU, MAU, or a trend (for example, "share of installs opened daily").</span>'],
+        ['Source + link', '<b class="k">Source + link:</b><span>who measured it, plus a link to the page where you found it.</span>'],
+        ['Date', '<b class="k">Date:</b><span>the period the number covers, not the day you found it.</span>'],
+        ['Reported or estimated?', '<b class="k">Reported or estimated?:</b><span><em>reported</em> if the company counted it; <em>estimated</em> if a measurement firm modeled it.</span>'],
+        ['A second source agrees? (✓ / ✗ / not found)', '<b class="k">A second source agrees?:</b><span>✓, ✗, or <b>not found</b>. Fill this in for row 1 too. An article repeating BeReal\'s own number isn\'t a second source.</span>']
+      ],
+      rows: [['40M', 'MAU, worldwide', 'BeReal (shared in the training)', '2024', 'Reported', '<span class="yours">← your job</span>'], ['', '', '', '', '', '']]
+    },
+    2: {
+      title: 'Box 2: What Users Say',
+      widths: [7, 33, 16, 12, 18, 14],
+      cols: [
+        ['#', '<b class="k">#:</b><span>number each row. Box 3 will point back to these numbers.</span>'],
+        ['Quote (copied exactly)', '<b class="k">Quote (copied exactly):</b><span>word for word. Don\'t paraphrase or fix the spelling.</span>'],
+        ['Where (link)', '<b class="k">Where (link):</b><span>the link to the review or post.</span>'],
+        ['Date', '<b class="k">Date:</b><span>when it was posted. If the page doesn\'t show a year, write "year not shown".</span>'],
+        ['Theme tag', '<b class="k">Theme tag:</b><span>a short label in your own words, like "late posts" or "friends not active".</span>'],
+        ['👍 / 👎', '<b class="k">👍 / 👎:</b><span>is the person happy or unhappy about it?</span>']
+      ],
+      rows: [['1', '', '', '', '', '']]
+    },
+    3: {
+      title: 'Box 3: The Triangulation Grid',
+            cols: [
+        ['Theme', '<b class="k">1. Theme:</b><span>take the theme tags from Box 2 and give each one its own row.</span>', 'theme'],
+        ['BeReal\'s own data', null, 'src'], ['Measurement firms', null, 'src'], ['Press', null, 'src'],
+        ['App reviews', null, 'src'], ['Reddit', null, 'src'], ['My teardown', null, 'src'],
+        ['Pattern?', '<b class="k">3. Pattern?:</b><span>count the ✓ marks across the row and label it with the pattern rule:<ul><li>🟢 <b>Pattern:</b> ✓ in <b>3 or more different kinds</b> of source</li><li>🟡 <b>Signal:</b> ✓ in 1–2 kinds</li><li>🔴 <b>Conflict:</b> sources disagree. Say which you trust more, and why.</li></ul></span>', 'pat']
+      ],
+      src: '<b class="k">2. The six source columns:</b><span>tick ✓ every <b>kind</b> of source that shows that theme, and say where: a Box 1 row, a Box 2 #, or a moment # from your teardown. For example: <em>"✓ #3, #7"</em>.</span>',
+      rows: [['', '', '', '', '', '', '', '']]
+    }
+  };
+
+  document.querySelectorAll('.boxprev[data-box]').forEach(el => {
+    const id = el.dataset.box, box = BOXES[id];
+    const guide = document.getElementById('guide' + id);
+    const cg = box.widths ? `<colgroup>${box.widths.map(w => `<col style="width:${w}%">`).join('')}</colgroup>` : '';
+    el.innerHTML =
+      `<div class="bt"><span class="n">${id}</span>${box.title}<span class="tap">👆 Tap each column to see how to fill it</span></div>` +
+      `<table class="btable">${cg}<tr>${box.cols.map(([h], i) => `<th><button class="colbtn" type="button" data-i="${i}">${h}</button></th>`).join('')}</tr>` +
+      box.rows.map(r => `<tr>${r.map(c => `<td${c.includes('yours') ? ' class="yours"' : ''}>${c}</td>`).join('')}</tr>`).join('') + `</table>`;
+    const btns = [...el.querySelectorAll('.colbtn')];
+    function pick(i) {
+      const col = box.cols[i];
+      const group = col[2];
+      btns.forEach((b, k) => {
+        const same = group ? box.cols[k][2] === group : k === i;
+        b.classList.toggle('on', same);
+        if (same) b.classList.add('seen');
+      });
+      guide.innerHTML = col[1] || box.src;
+    }
+    btns.forEach(b => b.addEventListener('click', () => pick(+b.dataset.i)));
+    el.reset = () => { btns.forEach(b => b.classList.remove('seen')); pick(0); };
+    pick(0);
+  });
+
+  // on-track / stuck notes, word for word
+  const HELP = {
+    2: ['You\'re on track if you have at least one number that didn\'t come from BeReal, and every row has a date, a link, and an answer in the last column.',
+        'Only finding BeReal\'s own numbers? Add the name of a measurement firm to your search, like <em>BeReal Sensor Tower daily</em>. Still nothing after 15 minutes? Write <b>"not found"</b> in the last column. That\'s an honest answer, and it tells your reader how much weight the number can carry.'],
+    3: ['You\'re on track if a reader could click any link and find your exact quote.',
+        'All your quotes say the same thing? Look for the opposite on purpose: search for reviews from people who <b>love</b> the part you think is broken.'],
+    4: ['You\'re on track if every ✓ points to a specific row or moment #, and at least one theme is honestly labeled 🟡 or 🔴.',
+        'Everything looks like a pattern? Check your ticks. <b>Ten App Store reviews are still one kind of source</b>, so they earn one ✓ in the "App reviews" column, not ten.'],
+    5: ['You\'re on track if your "because" answers point to specific themes from Box 3, not just a feeling.',
+        'The data contradicts you? <b>Good.</b> Say so. Changing your mind because of evidence is exactly what PMs are supposed to do.']
+  };
+  document.querySelectorAll('[data-help]').forEach(el => {
+    const k = el.dataset.help, [ok, stuck] = HELP[k];
+    el.innerHTML =
+      `<button class="hbtn" type="button" aria-expanded="false" data-pop="ok${k}">✅ Am I on track?</button>` +
+      `<button class="hbtn" type="button" aria-expanded="false" data-pop="st${k}">😵‍💫 Stuck?</button>` +
+      `<div class="pop check" id="ok${k}"><span class="ic">✅</span><span>${ok}</span></div>` +
+      `<div class="pop stuck" id="st${k}"><span class="ic">😵‍💫</span><span>${stuck}</span></div>`;
+  });
+  const hbtns = [...document.querySelectorAll('.hbtn')];
+  function closePops() {
+    hbtns.forEach(b => { b.setAttribute('aria-expanded', 'false'); document.getElementById(b.dataset.pop).classList.remove('show'); });
+  }
+  hbtns.forEach(b => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') === 'true';
+    closePops();
+    if (!open) { b.setAttribute('aria-expanded', 'true'); document.getElementById(b.dataset.pop).classList.add('show'); }
+  }));
+
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd');
+  const back = document.getElementById('back');
+  const hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  function go(to) {
+    closePops();
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    fwd.classList.toggle('hidden', current === slides.length - 1);
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1) handTimer = setTimeout(() => hand.style.opacity = 1, 2600);
+  }
+
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { document.querySelectorAll('.boxprev[data-box]').forEach(b => b.reset()); go(0); });
+  window.addEventListener('resize', fit);
+
+  // preview helper: #N opens slide N; add "cK" to pick column K in that slide's box; "ok"/"st" opens a help note
+  const start = parseInt(location.hash.slice(1), 10);
+  go(start >= 1 && start <= slides.length ? start - 1 : 0);
+  const cm = location.hash.match(/c(\d)/);
+  if (cm) { const b = slides[current].querySelectorAll('.colbtn')[+cm[1] - 1]; if (b) b.click(); }
+  const pop = location.hash.match(/(ok|st)$/);
+  if (pop) { const b = slides[current].querySelectorAll('.hbtn')[pop[1] === 'ok' ? 0 : 1]; if (b) b.click(); }
+</script>
+</body>
+</html>
