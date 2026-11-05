@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where You Are Right Now</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4;
+    --green: #18DD4C; --green-dark: #07A657; --green-50: #ECFDF1; --green-200: #B5F7C9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+
+  /* top bar */
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft { display: flex; align-items: center; gap: 14px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+
+  /* slides */
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .35s !important; } .d2 { transition-delay: .7s !important; } .d3 { transition-delay: 1.05s !important; } .d4 { transition-delay: 1.4s !important; } .d5 { transition-delay: 1.75s !important; }
+
+  /* navigation */
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--green); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); }
+  .fwd:hover { background: var(--green-dark); }
+  .fwd:hover svg path { stroke: var(--white); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  .fwd:focus-visible, .back:focus-visible, .restart:focus-visible { outline: 3px solid var(--black); outline-offset: 3px; }
+  .hand { position: absolute; right: 22px; bottom: 6px; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+
+  /* ---------- the roadmap (slide 1, and small on slide 2) ---------- */
+  .s1 { display: flex; flex-direction: column; justify-content: center; padding-bottom: 90px; }
+  .road { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); }
+  .road::before { content: ""; position: absolute; left: 10%; right: 10%; top: 44px; height: 6px; background: repeating-linear-gradient(90deg, var(--black) 0 14px, transparent 14px 24px); }
+  .road .fill { position: absolute; left: 10%; top: 41px; height: 12px; width: 0; background: var(--black); border-radius: 6px; transition: width .8s ease .5s; }
+  .slide.active .road .fill { width: 8%; }
+  .stage { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; opacity: 0; transform: translateY(12px); transition: opacity .4s ease, transform .4s ease; }
+  .slide.active .stage { opacity: 1; transform: none; }
+  .stage:nth-child(2) { transition-delay: .2s; } .stage:nth-child(3) { transition-delay: .9s; } .stage:nth-child(4) { transition-delay: 1.1s; } .stage:nth-child(5) { transition-delay: 1.3s; } .stage:nth-child(6) { transition-delay: 1.5s; }
+  .stage .c { width: 92px; height: 92px; border-radius: 50%; border: 3.5px solid var(--black); background: var(--white); display: flex; align-items: center; justify-content: center; font-size: 36px; position: relative; z-index: 1; }
+  .stage.here .c { background: var(--green); box-shadow: 0 0 0 8px var(--white), 0 0 0 11px var(--black); }
+  .stage .nm { font-size: 20px; font-weight: 800; line-height: 1.2; padding: 0 4px; }
+  .stage .k { font-size: 14px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #444; }
+  .pin { position: absolute; top: -78px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; opacity: 0; transition: opacity .4s ease 1.9s; }
+  .slide.active .pin { opacity: 1; animation: drop 1.6s ease-in-out 2.2s infinite; }
+  @keyframes drop { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-6px); } }
+  .pin span { font-size: 15px; font-weight: 800; white-space: nowrap; padding: 6px 12px; border-radius: 999px; background: var(--black); color: var(--white); }
+  .pin i { width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 11px solid var(--black); }
+
+  /* ---------- slide 2: what you've done ---------- */
+  .s2 { display: flex; flex-direction: column; justify-content: center; gap: 22px; padding-bottom: 80px; }
+  .done-card { display: grid; grid-template-columns: 120px 1fr; gap: 26px; align-items: center; border: 3.5px solid var(--black); border-radius: 26px; padding: 26px 30px; background: var(--white); box-shadow: 10px 10px 0 var(--gray); margin-right: 60px; }
+  .done-card .big { width: 120px; height: 120px; border-radius: 50%; background: var(--green); border: 3.5px solid var(--black); display: flex; align-items: center; justify-content: center; font-size: 60px; font-weight: 800; transform: scale(0); transition: transform .45s cubic-bezier(.3,1.6,.5,1) .5s; }
+  .slide.active .done-card .big { transform: scale(1); }
+  .done-card .k { font-size: 14px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #444; }
+  .done-card h2 { font-size: 46px; line-height: 1; margin: 6px 0 12px; }
+  .done-card p { font-size: 22px; line-height: 1.45; }
+  .trail { display: flex; flex-wrap: wrap; gap: 10px; }
+  .trail span { font-size: 17px; font-weight: 800; padding: 7px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); opacity: 0; transform: translateY(8px); transition: opacity .35s ease, transform .35s ease; }
+  .trail span:nth-child(even) { background: var(--soft); }
+  .slide.active .trail span { opacity: 1; transform: none; }
+  .trail span:nth-child(1) { transition-delay: 1s; } .trail span:nth-child(2) { transition-delay: 1.25s; } .trail span:nth-child(3) { transition-delay: 1.5s; }
+
+  /* ---------- slide 3: what's next ---------- */
+  .s3 { display: flex; flex-direction: column; gap: 14px; }
+  .s3 .k { font-size: 14px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #444; }
+  .next { position: relative; display: flex; flex-direction: column; gap: 12px; margin-right: 110px; padding-left: 26px; }
+  .next::before { content: ""; position: absolute; left: 0; top: 16px; bottom: 16px; width: 4px; background: repeating-linear-gradient(var(--black) 0 10px, transparent 10px 18px); }
+  .nx { position: relative; display: grid; grid-template-columns: 210px 1fr; gap: 18px; align-items: center; border: 2.5px solid var(--black); border-radius: 18px; padding: 14px 18px; background: var(--white); }
+  .nx::before { content: ""; position: absolute; left: -35px; top: 50%; width: 20px; height: 20px; margin-top: -10px; border-radius: 50%; border: 3px solid var(--black); background: var(--white); }
+  .nx:first-child { border-width: 3.5px; box-shadow: 7px 7px 0 var(--gray); }
+  .nx:first-child::before { background: var(--black); }
+  .nx .nm { font-family: 'DM Serif Text', serif; font-size: 28px; line-height: 1.05; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .nx .nm em { font-family: 'Inter', sans-serif; font-style: normal; font-size: 14px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--black); color: var(--white); }
+  .nx p { font-size: 19px; line-height: 1.42; }
+  .nx:nth-child(even) { background: var(--soft); }
+
+  /* ---------- slide 4: Project 2 ---------- */
+  .s4 { background: var(--green-200); display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-bottom: 40px; }
+  .s4 .k { font-size: 14px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+  .s4 h2 { font-size: 54px; line-height: 1; }
+  .s4 .intro { font-size: 22px; line-height: 1.45; max-width: 680px; }
+  .learn { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .ln { display: grid; grid-template-columns: 56px 1fr; gap: 14px; align-items: center; border: 3px solid var(--black); border-radius: 18px; padding: 14px 16px; background: var(--white); box-shadow: 6px 6px 0 var(--black); }
+  .ln .ic { width: 56px; height: 56px; border-radius: 14px; border: 2.5px solid var(--black); background: var(--soft); display: flex; align-items: center; justify-content: center; font-size: 28px; }
+  .ln p { font-size: 19px; line-height: 1.38; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <button class="restart" id="restart" type="button">↺ Start over</button>
+  </div>
+
+  <!-- ================= Slide 1: the roadmap ================= -->
+  <section class="slide s1 active" aria-live="polite">
+    <div class="road" role="img" aria-label="Five PM stages in a row: Discovery, Research, Planning, Development and Testing, Evaluation. You are at Discovery.">
+      <span class="fill"></span>
+      <div class="stage here"><span class="pin"><span>You are here</span><i></i></span><span class="c" aria-hidden="true">🔍</span><span class="nm">Discovery</span></div>
+      <div class="stage"><span class="c" aria-hidden="true">📊</span><span class="nm">Research</span></div>
+      <div class="stage"><span class="c" aria-hidden="true">🗺️</span><span class="nm">Planning</span></div>
+      <div class="stage"><span class="c" aria-hidden="true">🛠️</span><span class="nm">Development &amp; Testing</span></div>
+      <div class="stage"><span class="c" aria-hidden="true">📏</span><span class="nm">Evaluation</span></div>
+    </div>
+  </section>
+
+  <!-- ================= Slide 2: what you've done ================= -->
+  <section class="slide s2">
+    <div class="done-card auto">
+      <span class="big" aria-hidden="true">✓</span>
+      <div>
+        <span class="k">PM Stage · What You've Done</span>
+        <h2 class="serif">Discovery</h2>
+        <p>You tore down BeReal, checked your view against real data, and turned it into an opportunity note.</p>
+      </div>
+    </div>
+    <div class="trail" aria-hidden="true"><span>🔎 Teardown</span><span>📊 Data Organizer</span><span>💡 Opportunity Note</span></div>
+  </section>
+
+  <!-- ================= Slide 3: what's next ================= -->
+  <section class="slide s3">
+    <span class="k auto">PM Stage · What's Next</span>
+    <div class="next">
+      <div class="nx auto d1"><span class="nm">Research<em>Next up</em></span><p>You'll analyze competitors to see how they're addressing similar user problems and where gaps exist.</p></div>
+      <div class="nx auto d2"><span class="nm">Planning</span><p>You'll use your insights to decide what the product <em>should</em> do next.</p></div>
+      <div class="nx auto d3"><span class="nm">Development &amp; Testing</span><p>You'll later learn how to bring ideas to life and validate them with users.</p></div>
+      <div class="nx auto d4"><span class="nm">Evaluation</span><p>You'll learn how to tell whether a change actually worked.</p></div>
+    </div>
+  </section>
+
+  <!-- ================= Slide 4: Project 2 ================= -->
+  <section class="slide s4">
+    <span class="k auto">Coming up</span>
+    <h2 class="serif auto d1">What to Expect in Project 2</h2>
+    <p class="intro auto d1">In the next project, you'll dive into <b>competitor research and analysis</b>. You'll learn how to:</p>
+    <div class="learn">
+      <div class="ln auto d2"><span class="ic" aria-hidden="true">🔭</span><p>Study competitors' products and positioning.</p></div>
+      <div class="ln auto d3"><span class="ic" aria-hidden="true">🧩</span><p>Identify what's unique or missing in the current market.</p></div>
+      <div class="ln auto d4"><span class="ic" aria-hidden="true">👥</span><p>Use your user insights to evaluate how competitors meet or fail to meet user needs.</p></div>
+      <div class="ln auto d5"><span class="ic" aria-hidden="true">🧭</span><p>Translate this analysis into actionable insights that guide product strategy.</p></div>
+    </div>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true">
+    <path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+    <line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/>
+  </svg>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd');
+  const back = document.getElementById('back');
+  const hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    fwd.classList.toggle('hidden', current === slides.length - 1);
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1) handTimer = setTimeout(() => hand.style.opacity = 1, 2800);
+  }
+
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => go(0));
+  window.addEventListener('resize', fit);
+
+  // preview helper: #N opens slide N
+  const start = parseInt(location.hash.slice(1), 10);
+  go(start >= 1 && start <= slides.length ? start - 1 : 0);
+</script>
+</body>
+</html>
