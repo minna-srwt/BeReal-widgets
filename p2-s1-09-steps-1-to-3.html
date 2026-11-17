@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Benchmarking Steps 1 to 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #DFE9FC; --blue-200: #C2D5F9; --blue: #2550D0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .stair { display: flex; align-items: flex-end; gap: 6px; }
+  .stair span { width: 40px; border: 2.5px solid var(--black); border-radius: 8px 8px 0 0; background: var(--white); display: flex; align-items: flex-start; justify-content: center; font-size: 25px; font-weight: 800; padding-top: 2px; }
+  .stair span:nth-child(1) { height: 36px; } .stair span:nth-child(2) { height: 42px; } .stair span:nth-child(3) { height: 48px; } .stair span:nth-child(4) { height: 54px; } .stair span:nth-child(5) { height: 60px; }
+  .stair span.on { background: var(--blue); color: var(--white); }
+  .stair span.done { background: var(--blue-50); }
+  .shead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-right: 0; }
+  .shead h3 { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 36px; line-height: 1.1; }
+
+  .st { display: flex; flex-direction: column; gap: 12px; padding-bottom: 24px; padding-top: 64px; }
+  .s1 { justify-content: center; padding-bottom: 50px; }
+  .s1 .shead h3 { font-size: 44px; }
+  .s1 .row { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: center; }
+  .target { width: 100%; max-width: 260px; max-height: 260px; justify-self: center; margin-right: 80px; overflow: visible; }
+  .target .dotx { transition: opacity .5s ease 1.8s; }
+  .slide.active .target .dotx.fade { opacity: .15; }
+  .target .cross { transform-box: view-box; transform-origin: 130px 130px; }
+  .slide.active .target .cross { animation: lock 1.6s cubic-bezier(.6,0,.3,1) .6s both; }
+  @keyframes lock { 0% { transform: translate(-60px,40px) scale(1.3); opacity: 0; } 30% { opacity: 1; } 60% { transform: translate(30px,-20px) scale(1.1); } 100% { transform: none; } }
+  .types { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin-right: 104px; }
+  .types .tt { border: 3px solid var(--black); border-radius: 18px; padding: 12px 14px 8px; font-size: 25px; line-height: 1.35; background: var(--white); }
+  .types .tt.ind { background: var(--blue-50); }
+  .types .lead { grid-column: 1 / -1; border-left: 3px solid var(--black); border-right: 3px solid var(--black); padding: 6px 14px; font-size: 25px; font-weight: 700; background: var(--blue); color: var(--white); }
+  .types .ex { border: 3px solid var(--black); border-top: none; border-radius: 0 0 18px 18px; padding: 8px 14px 12px; font-size: 25px; line-height: 1.35; opacity: 0; transform: translateY(-8px); transition: opacity .4s ease 1.6s, transform .4s ease 1.6s; }
+  .types .ex.ind { background: var(--blue-50); transition-delay: 2.1s; }
+  .slide.active .types .ex { opacity: 1; transform: none; }
+  .types .lead { display: none; }
+  .types .exlead { grid-column: 1 / -1; font-size: 25px; font-weight: 700; padding: 10px 2px 6px; border-left: 3px solid transparent; }
+  .s3 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: center; padding-bottom: 40px; }
+  .s3 .left { display: flex; flex-direction: column; gap: 16px; }
+  .s3 em { font-style: italic; }
+  .duel { position: relative; height: 300px; margin-right: 80px; }
+  .duel .zd, .duel .mail { position: absolute; width: 150px; height: 120px; border: 3px solid var(--black); border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 25px; font-weight: 800; transition: opacity .5s ease 1.4s, transform .5s ease 1.4s, filter .5s ease 1.4s; }
+  .duel .zd { left: 0; top: 0; background: var(--gray); }
+  .duel .mail { right: 0; bottom: 0; background: var(--white); }
+  .slide.active .duel .zd { opacity: .35; transform: scale(.85); }
+  .slide.active .duel .mail { background: var(--blue-50); box-shadow: 0 0 0 10px var(--blue-200); transform: scale(1.08); }
+  .cats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin-right: 104px; }
+  .cats .cat:last-child { grid-column: 1 / -1; }
+  .cat { border: 2.5px solid var(--black); border-radius: 14px; padding: 6px 10px; font-size: 25px; line-height: 1.24; background: var(--white); opacity: 0; transform: scale(.9); transition: opacity .35s ease, transform .4s cubic-bezier(.3,1.5,.5,1); }
+  .cat:nth-child(even) { background: var(--blue-50); }
+  .slide.active .cat { opacity: 1; transform: none; }
+  .slide.active .cat:nth-child(1) { transition-delay: .6s; } .slide.active .cat:nth-child(2) { transition-delay: .9s; } .slide.active .cat:nth-child(3) { transition-delay: 1.2s; } .slide.active .cat:nth-child(4) { transition-delay: 1.5s; } .slide.active .cat:nth-child(5) { transition-delay: 1.8s; }
+  .s5 { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: center; padding-bottom: 40px; }
+  .s5 .stmt { font-size: 34px; }
+  .funnel { width: 100%; max-width: 280px; max-height: 340px; justify-self: center; margin-right: 80px; overflow: visible; }
+  .funnel .drop { opacity: 0; }
+  .slide.active .funnel .drop { animation: fall 1.4s ease-in forwards; }
+  @keyframes fall { 0% { opacity: 1; transform: translateY(-60px); } 60% { opacity: 1; transform: translateY(60px); } 100% { opacity: 0; transform: translateY(60px) translateX(var(--dx, 0)); } }
+  .slide.active .funnel .drop.keep { animation: pass 1.8s ease-in forwards; }
+  @keyframes pass { 0% { opacity: 1; transform: translateY(-60px); } 100% { opacity: 1; transform: translateY(150px); } }
+  .s6 { display: flex; flex-direction: column; gap: 14px; justify-content: center; padding-bottom: 30px; }
+  .hs { display: flex; flex-direction: column; gap: 10px; margin-right: 104px; }
+  .hs div { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; font-size: 25px; line-height: 1.38; opacity: 0; transform: translateX(-20px); transition: opacity .4s ease, transform .4s ease; }
+  .hs div::before { content: "✓"; width: 34px; height: 34px; border-radius: 50%; background: var(--blue); color: var(--white); font-size: 25px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .slide.active .hs div { opacity: 1; transform: none; }
+  .slide.active .hs div:nth-child(1) { transition-delay: .5s; } .slide.active .hs div:nth-child(2) { transition-delay: .9s; } .slide.active .hs div:nth-child(3) { transition-delay: 1.3s; }
+  .goal { border-left: 6px solid var(--blue); padding: 6px 0 6px 16px; margin-right: 104px; }
+  .goal em { font-style: italic; }
+  .srcs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; margin-right: 104px; }
+  .src { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: start; border: 2.5px solid var(--black); border-radius: 16px; padding: 7px 10px; font-size: 25px; line-height: 1.24; background: var(--white); opacity: 0; transform: translateY(14px); transition: opacity .35s ease, transform .4s cubic-bezier(.3,1.5,.5,1); }
+  .src .ic { width: 44px; height: 44px; border-radius: 12px; background: var(--blue-50); border: 2.5px solid var(--black); display: flex; align-items: center; justify-content: center; font-size: 25px; }
+  .slide.active .src { opacity: 1; transform: none; }
+  .slide.active .src:nth-child(1) { transition-delay: .6s; } .slide.active .src:nth-child(2) { transition-delay: .9s; } .slide.active .src:nth-child(3) { transition-delay: 1.2s; } .slide.active .src:nth-child(4) { transition-delay: 1.5s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+
+  <section class="slide st s1 active" aria-live="polite">
+    <div class="shead slam"><h3>Step 1: Choose the Right Competitors</h3><div class="stair" aria-hidden="true"><span class="on">1</span><span class="">2</span><span class="">3</span><span class="">4</span><span class="">5</span></div></div>
+    <div class="row">
+      <p class="auto d1">Start by identifying who you're comparing against. Not every name in the industry, just the ones that matter most.</p>
+      <svg class="target auto d1" viewBox="0 0 260 260" role="img" aria-label="A crosshair locking onto two dots out of many"><circle class="dotx fade" cx="40" cy="50" r="13" fill="#E4E4E4" stroke="#000" stroke-width="3"/><circle class="dotx" cx="130" cy="130" r="13" fill="#2550D0" stroke="#000" stroke-width="3"/><circle class="dotx fade" cx="220" cy="40" r="13" fill="#E4E4E4" stroke="#000" stroke-width="3"/><circle class="dotx fade" cx="60" cy="200" r="13" fill="#E4E4E4" stroke="#000" stroke-width="3"/><circle class="dotx fade" cx="200" cy="210" r="13" fill="#E4E4E4" stroke="#000" stroke-width="3"/><circle class="dotx" cx="130" cy="30" r="13" fill="#2550D0" stroke="#000" stroke-width="3"/><circle class="dotx fade" cx="240" cy="130" r="13" fill="#E4E4E4" stroke="#000" stroke-width="3"/><circle class="dotx fade" cx="30" cy="120" r="13" fill="#E4E4E4" stroke="#000" stroke-width="3"/><g class="cross"><circle cx="130" cy="130" r="56" fill="none" stroke="#2550D0" stroke-width="5"/><line x1="130" y1="60" x2="130" y2="96" stroke="#2550D0" stroke-width="5"/><line x1="130" y1="164" x2="130" y2="200" stroke="#2550D0" stroke-width="5"/><line x1="60" y1="130" x2="96" y2="130" stroke="#2550D0" stroke-width="5"/><line x1="164" y1="130" x2="200" y2="130" stroke="#2550D0" stroke-width="5"/></g></svg>
+    </div>
+  </section>
+
+  <section class="slide st">
+    <p class="auto">PMs typically select:</p>
+    <div class="types auto d1">
+      <div class="tt"><b>Direct competitors</b>: products that solve the same problem for the same audience</div>
+      <div class="tt ind"><b>Indirect competitors</b>: products that meet the same need in a different way</div>
+      <div class="exlead">Here's what that looked like for Help Scout:</div>
+      <div class="ex" style="border-top:3px solid var(--black);border-radius:18px">Zendesk, and the many other customer-support tools</div>
+      <div class="ex ind" style="border-top:3px solid var(--black);border-radius:18px">A plain email inbox, or a basic shared inbox the team already uses</div>
+    </div>
+  </section>
+
+  <section class="slide s3">
+    <div class="left">
+      <p class="auto">That second column is easy to skip. But April says Help Scout often isn't replacing Zendesk at all. It's replacing <em>just email</em>.</p>
+      <p class="auto d2"><b>Hold onto that.</b> It turns out to matter a lot more than most teams expect.</p>
+    </div>
+    <div class="duel" aria-hidden="true"><span class="zd">Zendesk</span><span class="mail"><svg width="70" height="50" viewBox="0 0 70 50"><rect x="3" y="3" width="64" height="44" rx="6" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M5 6 l30 22 l30 -22" fill="none" stroke="#2550D0" stroke-width="4"/></svg></span></div>
+  </section>
+
+  <section class="slide st">
+    <div class="shead auto"><h3>Step 2: Decide What You'll Compare</h3><div class="stair" aria-hidden="true"><span class="done">1</span><span class="on">2</span><span class="">3</span><span class="">4</span><span class="">5</span></div></div>
+    <p class="auto d1">This is where you define your "benchmark categories." For product managers, these often include:</p>
+    <div class="cats">
+      <div class="cat"><b>Core product features:</b> what the product actually does (e.g., posting, filters, notifications)</div>
+      <div class="cat"><b>User experience (UX):</b> how easy or enjoyable it is to use</div>
+      <div class="cat"><b>Performance metrics:</b> speed, engagement, retention</div>
+      <div class="cat"><b>Market performance:</b> downloads, ratings, social media buzz</div>
+      <div class="cat"><b>Pricing and positioning:</b> how it's marketed and how it makes money</div>
+    </div>
+  </section>
+
+  <section class="slide s5">
+    <p class="stmt auto">April adds one sharp filter: compare the things <b>you have that the alternatives don't</b>. Anything every competitor can already do won't help you win.</p>
+    <svg class="funnel auto d1" viewBox="0 0 260 320" role="img" aria-label="A funnel: common features fall away, only the unique ones pass through"><rect class="drop" x="40" y="10" width="34" height="22" rx="6" fill="#E4E4E4" stroke="#000" stroke-width="2.5" style="animation-delay:0.8s;--dx:-60px"/><rect class="drop keep" x="120" y="10" width="34" height="22" rx="6" fill="#2550D0" stroke="#000" stroke-width="2.5" style="animation-delay:1.0s;--dx:0px"/><rect class="drop" x="200" y="10" width="34" height="22" rx="6" fill="#E4E4E4" stroke="#000" stroke-width="2.5" style="animation-delay:1.2s;--dx:60px"/><rect class="drop" x="80" y="10" width="34" height="22" rx="6" fill="#E4E4E4" stroke="#000" stroke-width="2.5" style="animation-delay:1.5s;--dx:-60px"/><rect class="drop keep" x="160" y="10" width="34" height="22" rx="6" fill="#2550D0" stroke="#000" stroke-width="2.5" style="animation-delay:1.8s;--dx:0px"/><rect class="drop" x="110" y="10" width="34" height="22" rx="6" fill="#E4E4E4" stroke="#000" stroke-width="2.5" style="animation-delay:2.1s;--dx:60px"/><path d="M20 70 h220 l-80 90 v100 h-60 v-100 z" fill="#DFE9FC" stroke="#000" stroke-width="5" stroke-linejoin="round"/></svg>
+  </section>
+
+  <section class="slide s6">
+    <p class="auto">For Help Scout, that list included:</p>
+    <div class="hs">
+      <div><span>A shared inbox built for customer service, so no customer's message gets missed or answered twice</span></div>
+      <div><span>A chat bubble that <b>only appears when a real person is available</b> to reply</span></div>
+      <div><span>Every customer gets a person helping them, not just a ticket number</span></div>
+    </div>
+    <p class="goal auto d4">The goal is to find <em>meaningful comparison points</em> that connect to BeReal's goals, not just a long list.</p>
+  </section>
+
+  <section class="slide st">
+    <div class="shead auto"><h3>Step 3: Gather Your Data</h3><div class="stair" aria-hidden="true"><span class="done">1</span><span class="done">2</span><span class="on">3</span><span class="">4</span><span class="">5</span></div></div>
+    <p class="auto d1">Now it's time to collect information. You don't need fancy tools, just curiosity and reliable sources:</p>
+    <div class="srcs">
+      <div class="src"><span class="ic" aria-hidden="true">📱</span><span><b>App stores and websites</b> for features, reviews, and screenshots</span></div>
+      <div class="src"><span class="ic" aria-hidden="true">📈</span><span><b>Tools like </b><a href="https://www.semrush.com/" target="_blank" rel="noopener"><b>Semrush</b></a><b>, </b><a href="https://www.similarweb.com/" target="_blank" rel="noopener"><b>Similarweb</b></a><b>, or </b><a href="https://sensortower.com/" target="_blank" rel="noopener"><b>Sensor Tower</b></a> for performance data</span></div>
+      <div class="src"><span class="ic" aria-hidden="true">💬</span><span><b>User feedback</b> on Reddit, X (Twitter), or forums for honest opinions</span></div>
+      <div class="src"><span class="ic" aria-hidden="true">📰</span><span><b>Analyst reports and articles</b> for big-picture trends</span></div>
+    </div>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    placeHand();
+  }
+  const W = window.W || {};
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd'), back = document.getElementById('back'), hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  const gateOf = s => s.dataset.gate ? s.querySelector(s.dataset.gate) : null;
+  const locked = s => !!s.dataset.gate && !s.classList.contains('opened');
+  // until a gate is tapped the hand points at it; otherwise it points at the forward arrow
+  function placeHand() {
+    const s = slides[current], g = locked(s) ? gateOf(s) : null;
+    hand.classList.toggle('on-gate', !!g);
+    if (g) {
+      const c = canvas.getBoundingClientRect(), r = g.getBoundingClientRect(), k = c.width / canvas.offsetWidth;
+      hand.style.left = ((r.left + r.width * 0.65 - c.left) / k) + 'px';
+      hand.style.top = ((r.top + r.height * 0.55 - c.top) / k) + 'px';
+    } else { hand.style.left = ''; hand.style.top = ''; }
+  }
+  function showFwd(delay) {
+    const s = slides[current];
+    fwd.classList.toggle('hidden', current === slides.length - 1 || locked(s));
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1 || locked(s)) handTimer = setTimeout(() => { placeHand(); hand.style.opacity = 1; }, delay != null ? delay : +(s.dataset.hand || 2600));
+  }
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    // load a clip only on its slide, and unload it when leaving so it stops playing
+    document.querySelectorAll('iframe[data-src]').forEach(f => {
+      const on = f.closest('.slide') === slides[current];
+      if (on && !f.getAttribute('src')) f.src = f.dataset.src; else if (!on && f.getAttribute('src')) f.removeAttribute('src');
+    });
+    if (W.onSlide) W.onSlide(current, slides[current]);
+    showFwd();
+  }
+  slides.forEach(s => {
+    const g = gateOf(s); if (!g) return;
+    g.addEventListener('click', () => {
+      if (s.classList.contains('opened')) return;
+      s.classList.add('opened');
+      if (W.onOpen) W.onOpen(s);
+      showFwd(+(s.dataset.after || 1600));
+    });
+  });
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { slides.forEach(s => s.classList.remove('opened')); if (W.onRestart) W.onRestart(); go(0); });
+  window.addEventListener('resize', fit);
+  // preview helper: #N opens slide N; add "open" (e.g. #4open) to show a gated slide already opened
+  const start = parseInt(location.hash.slice(1), 10);
+  const target = start >= 1 && start <= slides.length ? start - 1 : 0;
+  if (location.hash.includes('open')) { slides[target].classList.add('opened'); if (W.onOpen) W.onOpen(slides[target]); }
+  go(target);
+  fit();
+</script>
+</body>
+</html>
