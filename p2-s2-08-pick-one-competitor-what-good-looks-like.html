@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pick One Competitor: What Good Looks Like</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #DFE9FC; --blue-200: #C2D5F9; --blue: #2550D0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .page { position: absolute; inset: 0; padding: 66px 40px 24px; opacity: 0; pointer-events: none; transition: opacity .4s ease; overflow: hidden; display: flex; flex-direction: column; gap: 12px; }
+  .page.active { opacity: 1; pointer-events: auto; }
+  .page.active .auto { opacity: 1; transform: none; }
+  .menu-btn { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px 0 12px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 16px; font-weight: 700; transition: opacity .3s; }
+  .menu-btn:hover { background: var(--gray); }
+  .jump { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 16px; font-weight: 800; box-shadow: 0 3px 0 var(--black); white-space: nowrap; transition: opacity .3s; }
+  .jump:hover { background: var(--black); color: var(--white); }
+  .p-menu { justify-content: center; gap: 20px; padding-bottom: 30px; }
+  .p-menu h2 { font-size: 52px; line-height: 1; }
+  .picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .pick { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; text-align: left; padding: 18px; border-radius: 22px; border: 3px solid var(--black); background: var(--white); cursor: pointer; font: inherit; color: inherit; min-height: 190px; box-shadow: 7px 7px 0 var(--gray); transition: transform .15s, box-shadow .15s; }
+  .pick:hover { transform: translate(-2px,-2px); box-shadow: 9px 9px 0 var(--black); }
+  .pick.good { background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); }
+  .pick .ico { width: 58px; height: 58px; border-radius: 16px; border: 2.5px solid var(--black); background: var(--white); display: flex; align-items: center; justify-content: center; font-size: 30px; }
+  .pick .name { font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.05; }
+  .pick .seen { position: absolute; top: -14px; right: -14px; width: 42px; height: 42px; border-radius: 50%; background: var(--blue); color: var(--white); border: 3px solid var(--black); display: flex; align-items: center; justify-content: center; font-size: 25px; font-weight: 800; transform: scale(0); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+  .pick.visited .seen { transform: scale(1); }
+  .pick .hand { right: 8px; bottom: -14px; }
+  .page.active .pick.next .hand { opacity: 1; transition: opacity .4s ease 1.2s; }
+  .note { font-size: 25px; line-height: 1.4; padding: 10px 14px; border-radius: 12px; background: var(--blue-50); border: 2px solid var(--blue-200); }
+  .phead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .phead h2 { font-size: 32px; line-height: 1.05; margin-right: 4px; }
+  .score { display: inline-flex; padding: 3px 11px; border-radius: 999px; border: 2.5px solid var(--black); font-size: 25px; font-weight: 800; background: var(--white); }
+  .good .score { background: var(--blue-50); }
+  .stabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .stab { font: inherit; font-size: 16px; font-weight: 700; padding: 6px 13px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; }
+  .stab[aria-selected="true"] { background: var(--black); color: var(--white); }
+  .stab.seen:not([aria-selected="true"]) { background: var(--blue-50); }
+  .stabs .sub { font-size: 25px; font-weight: 800; color: var(--blue); margin-left: 4px; }
+  .parts { position: relative; flex: 1; min-height: 0; }
+  .part { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .part.on { opacity: 1; pointer-events: auto; }
+  .part .lbl { font-size: 25px; font-weight: 800; color: var(--blue); }
+  .crit-q { border: 3px solid var(--black); border-radius: 16px; padding: 10px 16px; box-shadow: 6px 6px 0 var(--blue-200); }
+  .crit-q .k { font-size: 25px; font-weight: 800; color: var(--blue); }
+  .crit-q p { font-family: 'DM Serif Text', serif; font-size: 28px; line-height: 1.2; margin-top: 2px; }
+  .levels { display: flex; flex-direction: column; gap: 8px; margin-right: 104px; }
+  .lvl { display: grid; grid-template-columns: 170px 1fr; border: 2.5px solid var(--black); border-radius: 14px; overflow: hidden; }
+  .lvl .lh { padding: 8px 12px; font-size: 25px; font-weight: 800; line-height: 1.15; border-right: 2px solid var(--black); display: flex; align-items: center; }
+  .lvl.l1 .lh { background: var(--blue-50); } .lvl.l2 .lh { background: var(--blue); color: var(--white); }
+  .lvl .lb { padding: 8px 14px; font-size: 25px; line-height: 1.3; }
+  .ans { border: 3px solid var(--black); border-radius: 16px; overflow: hidden; background: var(--white); margin-right: 104px; }
+  .ans .qn { display: block; padding: 8px 14px; background: var(--blue-50); border-bottom: 2px solid var(--black); font-size: 25px; font-weight: 700; line-height: 1.25; }
+  .ans .a { display: block; padding: 10px 14px; font-size: 25px; line-height: 1.36; }
+  .bad .ans .a { font-style: italic; }
+  .ann { border-radius: 14px; padding: 10px 14px; font-size: 25px; line-height: 1.36; border: 2.5px solid var(--black); background: var(--white); margin-right: 104px; }
+  .ann b.crit { display: inline-block; padding: 0 10px; border-radius: 999px; margin-right: 6px; border: 2px solid var(--black); background: var(--blue); color: var(--white); }
+  .bad .ann b.crit { background: var(--gray); color: var(--black); }
+  .oneline { font-size: 25px; line-height: 1.4; padding: 10px 14px; border-left: 6px solid var(--blue); background: var(--blue-50); margin-right: 104px; }
+
+  .srow { border: 3px solid var(--black); border-radius: 14px; padding: 8px 14px; margin-right: 104px; display: flex; flex-direction: column; gap: 2px; background: var(--white); }
+  .srow .st { font-size: 25px; font-weight: 800; color: var(--blue); }
+  .srow .sq2 { font-size: 25px; line-height: 1.28; }
+  .srow .found { font-size: 25px; font-weight: 700; line-height: 1.28; }
+  .srow.empty { border-style: dashed; flex-direction: row; gap: 14px; align-items: center; }
+  .srow.empty .sq2 { color: #555; font-style: italic; }
+  .clist { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-right: 104px; }
+  .ci { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 2.5px solid var(--black); border-radius: 12px; padding: 6px 10px; font-size: 25px; line-height: 1.2; }
+  .ci .ty { flex: none; font-size: 25px; font-weight: 700; padding: 0 10px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); }
+  .ci .ty.indirect { background: var(--blue-50); } .ci .ty.substitute { background: var(--blue); color: var(--white); }
+  .pickline { display: flex; align-items: center; gap: 12px; font-size: 25px; border-left: 6px solid var(--blue); padding: 6px 14px; background: var(--blue-50); margin-right: 104px; }
+  .rat { font-size: 25px; line-height: 1.38; border-left: 6px solid var(--blue); padding: 8px 16px; background: var(--blue-50); margin-right: 104px; border-radius: 0 14px 14px 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+  <div class="topbar">
+    <button class="menu-btn hidden" id="toMenu" type="button" aria-label="Back to the menu"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Menu</button>
+    <div class="topright"><button class="jump hidden" id="jump" type="button"></button><button class="restart" id="restart" type="button">↺ Start over</button></div>
+  </div>
+
+  <section class="page p-menu active" id="menu" aria-live="polite">
+    <h2 class="serif auto">What Good Looks Like</h2>
+    <div class="picks auto d1">
+      <button class="pick" type="button" data-go="rubric"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">📏</span><span class="name">The rubric</span></button>
+      <button class="pick good" type="button" data-go="good"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">✅</span><span class="name">Strong example</span></button>
+      <button class="pick" type="button" data-go="bad"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">❌</span><span class="name">Not-yet example</span></button>
+    </div>
+    <p class="note auto d2">📌 These examples pick a competitor for <b>Help Scout</b>, the company from "Learn How to Benchmark Competitors", so you can see what a strong log looks like. Your log will be about BeReal.</p>
+  </section>
+
+  <section class="page" id="rubric">
+    <div class="phead"><h2 class="serif">📏 The rubric</h2></div>
+    <div class="stabs" role="tablist"></div>
+    <div class="parts"><div class="part" data-tab="Wide search"><div class="crit-q"><span class="k">Wide search · The test question</span><p>Did you search all three source types and find a varied list?</p></div><div class="levels"><div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">One source type, or fewer than 4 names</span></div><div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Two source types, or 4–5 names that are all direct competitors</span></div><div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">All three source types, 4–5+ names, at least one indirect competitor</span></div></div></div><div class="part" data-tab="Justified pick"><div class="crit-q"><span class="k">Justified pick · The test question</span><p>Could a reader tell why you picked <i>this</i> app over the others, and what you hope to learn?</p></div><div class="levels"><div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">No reason given, or the pick is a habit, not an app</span></div><div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Gives a reason that would fit any app on the list ("it's popular")</span></div><div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">Names what makes this app a strong benchmark and what you hope to learn from it</span></div></div></div><div class="part" data-tab="Status quo named"><div class="crit-q"><span class="k">Status quo named · The test question</span><p>Do you say what people do when they <i>don't</i> open BeReal?</p></div><div class="levels"><div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">Not mentioned</span></div><div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Mentioned, but vague ("they use other apps")</span></div><div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">Names a specific thing people do instead</span></div></div></div></div>
+  </section>
+
+  <section class="page good" id="good">
+    <div class="phead"><h2 class="serif">✅ Strong example</h2><span class="score">2 · 2 · 2</span></div>
+    <div class="stabs" role="tablist"></div>
+    <div class="parts"><div class="part" data-tab="Searches"><span class="lbl">1. My searches</span><div class="srow"><span class="st">Search engine</span><span class="sq2">Google · "best help desk software for small teams"</span><span class="found">→ Zendesk, Freshdesk, Zoho Desk</span></div><div class="srow"><span class="st">Industry source</span><span class="sq2">Statista · "Customer service software market share"</span><span class="found">→ Zendesk, Salesforce Service Cloud</span></div></div><div class="part" data-tab="Searches"><span class="lbl">1. My searches</span><div class="srow"><span class="st">AI tool</span><span class="sq2">ChatGPT · "List competitors for Help Scout, including direct and indirect ones. Also: what do teams do <i>instead</i> of using any of these tools?"</span><span class="found">→ Intercom, a shared Gmail inbox</span></div></div><div class="part" data-tab="List &amp; pick"><span class="lbl">2. Competitors I found</span><div class="clist"><div class="ci"><b>Zendesk</b><span class="ty direct">Direct</span></div><div class="ci"><b>Freshdesk</b><span class="ty direct">Direct</span></div><div class="ci"><b>Zoho Desk</b><span class="ty direct">Direct</span></div><div class="ci"><b>Salesforce Service Cloud</b><span class="ty direct">Direct</span></div><div class="ci"><b>Intercom</b><span class="ty indirect">Indirect</span></div><div class="ci"><b>A shared Gmail inbox</b><span class="ty substitute">Substitute</span></div></div><div class="pickline"><span class="lbl">3. My pick</span> <b>Zendesk</b></div></div><div class="part" data-tab="Rationale"><span class="lbl">4. My rationale</span><blockquote class="rat">Zendesk is "the gorilla in the market," so it's the tool most of Help Scout's customers already know. It came up in both my Google search and the Statista report, more than any other name. By benchmarking it, I want to learn which features small teams find heavy or confusing, because that's where Help Scout could feel simpler. <b>Status quo:</b> many small teams use no help-desk tool at all. They answer customers straight from a shared email inbox.</blockquote></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">Wide search: 2</b> All three source types, six names, and one indirect competitor (Intercom) plus a substitute.</div><div class="ann"><b class="crit">Justified pick: 2</b> Says why Zendesk over the others (most familiar, came up most often) and what they hope to learn (where Help Scout could feel simpler).</div></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">Status quo named: 2</b> Names a specific thing teams do instead: answering from a shared email inbox.</div></div></div>
+  </section>
+
+  <section class="page bad" id="bad">
+    <div class="phead"><h2 class="serif">❌ Not-yet example</h2><span class="score">0 · 1 · 0</span></div>
+    <div class="stabs" role="tablist"></div>
+    <div class="parts"><div class="part" data-tab="Searches"><span class="lbl">1. My searches</span><div class="srow"><span class="st">Search engine</span><span class="sq2">Google · "Help Scout competitors"</span><span class="found">→ Zendesk, Freshdesk</span></div><div class="srow empty"><span class="st">Industry source</span><span class="sq2">(blank)</span></div><div class="srow empty"><span class="st">AI tool</span><span class="sq2">(blank)</span></div></div><div class="part" data-tab="List &amp; pick"><span class="lbl">2. Competitors I found</span><div class="clist"><div class="ci"><b>Zendesk</b><span class="ty direct">Direct</span></div><div class="ci"><b>Freshdesk</b><span class="ty direct">Direct</span></div></div><div class="pickline"><span class="lbl">3. My pick</span> <b>Zendesk</b></div></div><div class="part" data-tab="Rationale"><span class="lbl">4. My rationale</span><blockquote class="rat"><i>I picked Zendesk because it's really popular and a lot of companies use it. It will be interesting to compare.</i></blockquote></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">Wide search: 0</b> One source type and two names, both direct.</div><div class="ann"><b class="crit">Justified pick: 1</b> "Really popular" is a reason, but it doesn't say why Zendesk over Freshdesk, or what they hope to learn.</div></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">Status quo named: 0</b> Doesn't say what teams do when they don't use any of these tools.</div><p class="oneline"><b>The difference in one line:</b> the strong log shows the search behind the pick. The not-yet log could have been written without searching at all.</p></div></div>
+  </section>
+
+  <button class="fwd hidden" id="fwd" type="button" aria-label="Next part"><svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+</div>
+<script>
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+  const pages = [...document.querySelectorAll('.page')];
+  const picks = [...document.querySelectorAll('.pick')];
+  const toMenu = document.getElementById('toMenu'), jump = document.getElementById('jump'), fwd = document.getElementById('fwd');
+  const visited = new Set();
+  const JUMPS = { rubric: ['good', 'See the strong example →'], good: ['bad', 'See the not-yet example →'], bad: ['good', '← See the strong example'] };
+  // each page is a series of parts; parts that share a label share one tab and are stepped with the arrow
+  const series = {};
+  ['rubric', 'good', 'bad'].forEach(id => {
+    const page = document.getElementById(id);
+    const parts = [...page.querySelectorAll('.part')];
+    const tabs = page.querySelector('.stabs');
+    const labels = [...new Set(parts.map(p => p.dataset.tab))];
+    tabs.innerHTML = labels.map(l => `<button class="stab" type="button" role="tab" data-l="${l}">${l}</button>`).join('') + '<span class="sub" aria-live="polite"></span>';
+    const btns = [...tabs.querySelectorAll('.stab')];
+    series[id] = { parts, btns, sub: tabs.querySelector('.sub'), i: 0 };
+    btns.forEach(b => b.addEventListener('click', () => showPart(id, parts.findIndex(p => p.dataset.tab === b.dataset.l))));
+  });
+  function showPart(id, i) {
+    const s = series[id];
+    s.i = i;
+    s.parts.forEach((p, k) => p.classList.toggle('on', k === i));
+    const label = s.parts[i].dataset.tab, group = s.parts.filter(p => p.dataset.tab === label);
+    s.btns.forEach(b => { const on = b.dataset.l === label; b.setAttribute('aria-selected', on ? 'true' : 'false'); if (on) b.classList.add('seen'); });
+    s.sub.textContent = group.length > 1 ? `${group.indexOf(s.parts[i]) + 1} of ${group.length}` : '';
+    fwd.classList.toggle('hidden', i === s.parts.length - 1);
+  }
+  function markNext() {
+    const next = picks.find(p => !visited.has(p.dataset.go));
+    picks.forEach(p => p.classList.toggle('next', p === next));
+  }
+  let currentId = 'menu';
+  function show(id) {
+    currentId = id;
+    pages.forEach(p => p.classList.toggle('active', p.id === id));
+    toMenu.classList.toggle('hidden', id === 'menu');
+    jump.classList.toggle('hidden', !JUMPS[id]);
+    if (JUMPS[id]) { jump.dataset.go = JUMPS[id][0]; jump.textContent = JUMPS[id][1]; }
+    if (series[id]) showPart(id, 0); else fwd.classList.add('hidden');
+    if (id !== 'menu') { visited.add(id); picks.forEach(p => p.classList.toggle('visited', visited.has(p.dataset.go))); }
+    markNext();
+  }
+  picks.forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+  jump.addEventListener('click', () => show(jump.dataset.go));
+  toMenu.addEventListener('click', () => show('menu'));
+  fwd.addEventListener('click', () => { const s = series[currentId]; if (s && s.i < s.parts.length - 1) showPart(currentId, s.i + 1); });
+  document.getElementById('restart').addEventListener('click', () => {
+    visited.clear(); picks.forEach(p => p.classList.remove('visited'));
+    Object.values(series).forEach(s => s.btns.forEach(b => b.classList.remove('seen')));
+    show('menu');
+  });
+  window.addEventListener('resize', fit);
+  // preview helper: #rubric, #good, #bad; add -N to open part N (e.g. #good-3)
+  const m = location.hash.slice(1).match(/^(rubric|good|bad)(?:-(\d))?$/);
+  show(m ? m[1] : 'menu');
+  if (m && m[2] && series[m[1]]) showPart(m[1], parseInt(m[2], 10) - 1);
+</script>
+</body>
+</html>
