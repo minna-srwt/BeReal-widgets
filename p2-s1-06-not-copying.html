@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Benchmarking Isn't Copying</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #DFE9FC; --blue-200: #C2D5F9; --blue: #2550D0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .s1 { display: grid; grid-template-columns: 1.2fr 1fr; column-gap: 26px; align-items: center; padding-bottom: 60px; }
+  .s1 .stmt { font-size: 50px; line-height: 1.1; }
+  .copier { width: 100%; max-width: 300px; max-height: 340px; justify-self: center; overflow: visible; }
+  .copier .sheet { transform: translateY(-40px); opacity: 0; }
+  .slide.active .copier .sheet { animation: printout .8s ease-out 1s forwards; }
+  @keyframes printout { to { transform: translateY(0); opacity: 1; } }
+  .copier .x { opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(2.4) rotate(-20deg); }
+  .slide.active .copier .x { animation: xslam .35s cubic-bezier(.5,0,.7,1.4) 2.1s forwards; }
+  @keyframes xslam { to { opacity: 1; transform: none; } }
+  .slide.active .copier { animation: shake .3s ease 2.45s; }
+  .s2 { display: flex; flex-direction: column; gap: 18px; padding-bottom: 30px; justify-content: center; }
+  .exits { display: flex; gap: 16px; margin-right: 110px; flex-wrap: wrap; }
+  .exit { display: flex; align-items: center; gap: 12px; border: 3px solid var(--black); border-radius: 16px; padding: 10px 16px; background: var(--white); font-size: 25px; font-weight: 800; opacity: 0; transform: translateY(20px); transition: opacity .4s ease, transform .5s cubic-bezier(.3,1.5,.5,1); }
+  .exit .arrow { color: var(--blue); }
+  .exit.e2 { background: var(--blue-50); }
+  .slide.active .exit { opacity: 1; transform: none; }
+  .slide.active .exit.e1 { transition-delay: 1.4s; } .slide.active .exit.e2 { transition-delay: 1.8s; }
+  .s3 { display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-bottom: 40px; }
+  .clue { display: grid; grid-template-columns: 76px 1fr; gap: 18px; align-items: center; border: 3px solid var(--black); border-radius: 20px; padding: 14px 18px; background: var(--white); margin-right: 104px; }
+  .clue.c2 { background: var(--blue-50); }
+  .clue .ic { position: relative; width: 76px; height: 76px; border-radius: 18px; border: 3px solid var(--black); background: var(--white); display: flex; align-items: center; justify-content: center; font-size: 34px; }
+  .badge { position: absolute; right: -16px; top: -16px; width: 46px; height: 46px; border-radius: 50%; background: var(--blue); color: var(--white); border: 3px solid var(--black); font-family: 'DM Serif Text', serif; font-size: 25px; display: flex; align-items: center; justify-content: center; transform: translateY(-80px); opacity: 0; }
+  .slide.active .badge { animation: dropin .5s cubic-bezier(.3,1.5,.5,1) 2.2s forwards; }
+  @keyframes dropin { to { transform: none; opacity: 1; } }
+  .floaty { display: inline-block; animation: floatup 2.4s ease-in-out infinite; }
+  @keyframes floatup { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  .s4 { display: grid; grid-template-columns: 1.25fr 1fr; column-gap: 24px; align-items: center; padding-bottom: 40px; }
+  .s4 .left { display: flex; flex-direction: column; gap: 14px; }
+  .s4 em { font-style: italic; }
+  .catch { font-family: 'DM Serif Text', serif; font-size: 32px; line-height: 1.15; color: var(--blue); opacity: 0; transform: scale(1.2); transition: opacity .3s ease 1.2s, transform .5s cubic-bezier(.3,1.5,.5,1) 1.2s; }
+  .s4.opened .catch { opacity: 1; transform: none; }
+  .phone { justify-self: center; position: relative; width: 210px; height: 340px; border: 5px solid var(--black); border-radius: 30px; background: var(--white); padding: 22px 14px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; margin-right: 80px; font: inherit; }
+  .phone:hover { box-shadow: 0 0 0 6px var(--blue-200); }
+  .review { height: 64px; border-radius: 12px; border: 2.5px solid var(--black); background: var(--gray); filter: blur(3px); transition: filter .5s ease, background .4s ease, border-radius .4s ease; }
+  .s4.opened .review { filter: none; background: var(--blue-200); border-radius: 4px 18px 4px 18px; animation: jitter .3s ease .5s 3; }
+  @keyframes jitter { 25% { transform: translateX(-4px) rotate(-1deg); } 75% { transform: translateX(4px) rotate(1deg); } }
+  .s4.opened .review:nth-child(2) { background: var(--blue); }
+  .s5 { display: flex; flex-direction: column; gap: 22px; justify-content: center; padding-bottom: 40px; }
+  .panels { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 10px; align-items: center; margin-right: 104px; }
+  .panel { border: 3px solid var(--black); border-radius: 18px; padding: 14px 10px; display: flex; flex-direction: column; align-items: center; gap: 10px; background: var(--white); opacity: 0; transform: translateY(16px); transition: opacity .4s ease, transform .5s cubic-bezier(.3,1.4,.5,1); }
+  .panel .t { font-size: 25px; font-weight: 800; text-align: center; line-height: 1.15; }
+  .panel.hurt { background: var(--gray); } .panel.built { background: var(--blue-50); box-shadow: 6px 6px 0 var(--blue); }
+  .panel svg { width: 80px; height: 80px; }
+  .slide.active .panel { opacity: 1; transform: none; }
+  .slide.active .panel.loved { transition-delay: .3s; } .slide.active .panel.hurt { transition-delay: .9s; } .slide.active .panel.built { transition-delay: 1.5s; }
+  .panels .arr { font-size: 34px; font-weight: 800; color: var(--blue); }
+  .s7 { display: flex; flex-direction: column; gap: 22px; justify-content: center; padding-bottom: 40px; }
+  .s7 .stmt { font-size: 36px; margin-right: 20px; }
+  .vsrow { display: flex; align-items: center; gap: 22px; margin-right: 110px; }
+  .vsrow .card { font-size: 30px; font-weight: 800; padding: 14px 24px; border: 3px solid var(--black); border-radius: 18px; background: var(--white); }
+  .vsrow .card.tbh { background: var(--blue-50); box-shadow: 6px 6px 0 var(--blue); }
+  .vsb { width: 76px; height: 76px; border-radius: 50%; background: var(--blue); color: var(--white); border: 3px solid var(--black); font-family: 'DM Serif Text', serif; font-size: 34px; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(2.6) rotate(-20deg); }
+  .slide.active .vsb { animation: vslam .35s cubic-bezier(.5,0,.7,1.4) 2.2s forwards; }
+  @keyframes vslam { to { opacity: 1; transform: rotate(-8deg); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+
+  <section class="slide s1 active" aria-live="polite">
+    <p class="stmt slam">But here's the part people get wrong: <b>benchmarking isn't copying.</b></p>
+    <svg class="copier auto d1" viewBox="0 0 260 300" role="img" aria-label="A photocopier printing a copy, then a big X stamped over it">
+      <rect x="20" y="110" width="220" height="150" rx="14" fill="#FFFFFF" stroke="#000" stroke-width="5"/>
+      <rect x="40" y="86" width="180" height="30" rx="6" fill="#E4E4E4" stroke="#000" stroke-width="5"/>
+      <rect x="60" y="140" width="140" height="14" rx="7" fill="#000"/>
+      <g class="sheet"><rect x="70" y="150" width="120" height="120" rx="4" fill="#FFFFFF" stroke="#000" stroke-width="4"/><line x1="86" y1="180" x2="174" y2="180" stroke="#C2D5F9" stroke-width="8"/><line x1="86" y1="204" x2="160" y2="204" stroke="#C2D5F9" stroke-width="8"/><line x1="86" y1="228" x2="170" y2="228" stroke="#C2D5F9" stroke-width="8"/></g>
+      <g class="x"><line x1="40" y1="40" x2="220" y2="280" stroke="#2550D0" stroke-width="22" stroke-linecap="round"/><line x1="220" y1="40" x2="40" y2="280" stroke="#2550D0" stroke-width="22" stroke-linecap="round"/></g>
+    </svg>
+  </section>
+
+  <section class="slide s2">
+    <p class="auto">One of the best examples comes from someone who has built several of the most viral apps of the last decade.</p>
+    <p class="auto d1"><a href="https://x.com/nikitabier" target="_blank" rel="noopener">Nikita Bier</a> co-founded <a href="https://en.wikipedia.org/wiki/Tbh_(app)" target="_blank" rel="noopener">tbh</a>, an app for high schoolers that he sold to Facebook for over $30 million, and later <a href="https://en.wikipedia.org/wiki/Gas_(app)" target="_blank" rel="noopener">Gas</a>, which he sold to <a href="https://discord.com/" target="_blank" rel="noopener">Discord</a>. On Lenny's Podcast, he described how tbh started.</p>
+    <div class="exits" aria-hidden="true"><span class="exit e1">tbh <span class="arrow">→</span> Facebook</span><span class="exit e2">Gas <span class="arrow">→</span> Discord</span></div>
+  </section>
+
+  <section class="slide s3">
+    <div class="clue auto"><span class="ic" aria-hidden="true"><span class="floaty">😍</span></span><p>A high schooler told him about a game teens were playing on Snapchat: post your story, and friends reply with emojis saying what they like about you.</p></div>
+    <div class="clue c2 auto d2"><span class="ic" aria-hidden="true"><svg width="40" height="40" viewBox="0 0 40 40"><path d="M6 8 h28 v20 h-16 l-8 7 v-7 h-4 z" fill="#C2D5F9" stroke="#000" stroke-width="3" stroke-linejoin="round"/></svg><span class="badge">#1</span></span><p>Around the same time, Nikita noticed the <b>#1 app in the entire US App Store</b> was <a href="https://en.wikipedia.org/wiki/Sarahah" target="_blank" rel="noopener">Sarahah</a>, an app for sending <i>anonymous</i> messages, where people can say something to you without revealing who they are. And the whole app was in <b>Arabic</b>.</p></div>
+  </section>
+
+  <section class="slide s4" data-gate=".phone" data-hand="3200" data-after="2400">
+    <div class="left">
+      <p class="auto">To Nikita, that was a huge signal. If American teens were pushing through an app they couldn't even read, they <em>really</em> wanted what it offered.</p>
+      <p class="auto d1">So he studied it. He read the reviews and the posts about it, and found the catch:</p>
+      <p class="catch"><b style="font-weight:400">lots of users were getting cruel, bullying messages.</b></p>
+    </div>
+    <button class="phone auto d1" type="button" aria-label="Read the reviews"><span class="review"></span><span class="review"></span><span class="review"></span><span class="review"></span></button>
+  </section>
+
+  <section class="slide s5">
+    <div class="panels" aria-hidden="true">
+      <div class="panel loved"><svg viewBox="0 0 80 80"><path d="M40 68 L14 42 a14 14 0 0 1 26 -18 a14 14 0 0 1 26 18 z" fill="#C2D5F9" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg><span class="t">What users loved</span></div>
+      <span class="arr">→</span>
+      <div class="panel hurt"><svg viewBox="0 0 80 80"><path d="M10 16 l12 8 l8 -12 l10 12 l12 -10 l4 14 l16 2 l-10 12 l10 12 l-16 2 l-4 14 l-12 -10 l-10 12 l-8 -12 l-12 8 l2 -14 l-12 -8 l12 -8 z" fill="#FFFFFF" stroke="#000" stroke-width="3.5" stroke-linejoin="round"/><line x1="12" y1="68" x2="68" y2="12" stroke="#000" stroke-width="6" stroke-linecap="round"/></svg><span class="t">What hurt</span></div>
+      <span class="arr">→</span>
+      <div class="panel built"><svg viewBox="0 0 80 80"><rect x="12" y="10" width="56" height="60" rx="8" fill="#FFFFFF" stroke="#000" stroke-width="4"/><rect x="20" y="20" width="40" height="10" rx="5" fill="#2550D0"/><rect x="20" y="36" width="40" height="10" rx="5" fill="#C2D5F9" stroke="#000" stroke-width="2"/><rect x="20" y="52" width="40" height="10" rx="5" fill="#C2D5F9" stroke="#000" stroke-width="2"/></svg><span class="t">What tbh built</span></div>
+    </div>
+    <p class="auto d3 pad">So tbh kept what users loved and removed what hurt. Instead of typing anything they wanted, people answered positive polls, like "Who has the best smile?"</p>
+  </section>
+
+  <section class="slide vslide">
+    <p class="auto">Hear him tell it:</p>
+    <div class="vwrap auto d1"><div class="video"><iframe data-src="https://www.youtube.com/embed/bhnfZhJWCWY?start=1504&end=1671" title="Nikita Bier on how tbh started" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></div>
+  </section>
+
+  <section class="slide s7">
+    <p class="stmt auto">That's the real point of comparing. Nikita didn't copy Sarahah. He studied <b>why</b> people wanted it and <b>where</b> it was failing them.</p>
+    <p class="auto d2">In April Dunford's terms, Sarahah was exactly what tbh had to beat.</p>
+    <div class="vsrow" aria-hidden="true"><span class="card tbh auto d2">tbh</span><span class="vsb">VS</span><span class="card auto d2">Sarahah</span></div>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    placeHand();
+  }
+  const W = window.W || {};
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd'), back = document.getElementById('back'), hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  const gateOf = s => s.dataset.gate ? s.querySelector(s.dataset.gate) : null;
+  const locked = s => !!s.dataset.gate && !s.classList.contains('opened');
+  // until a gate is tapped the hand points at it; otherwise it points at the forward arrow
+  function placeHand() {
+    const s = slides[current], g = locked(s) ? gateOf(s) : null;
+    hand.classList.toggle('on-gate', !!g);
+    if (g) {
+      const c = canvas.getBoundingClientRect(), r = g.getBoundingClientRect(), k = c.width / canvas.offsetWidth;
+      hand.style.left = ((r.left + r.width * 0.65 - c.left) / k) + 'px';
+      hand.style.top = ((r.top + r.height * 0.55 - c.top) / k) + 'px';
+    } else { hand.style.left = ''; hand.style.top = ''; }
+  }
+  function showFwd(delay) {
+    const s = slides[current];
+    fwd.classList.toggle('hidden', current === slides.length - 1 || locked(s));
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1 || locked(s)) handTimer = setTimeout(() => { placeHand(); hand.style.opacity = 1; }, delay != null ? delay : +(s.dataset.hand || 2600));
+  }
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    // load a clip only on its slide, and unload it when leaving so it stops playing
+    document.querySelectorAll('iframe[data-src]').forEach(f => {
+      const on = f.closest('.slide') === slides[current];
+      if (on && !f.getAttribute('src')) f.src = f.dataset.src; else if (!on && f.getAttribute('src')) f.removeAttribute('src');
+    });
+    if (W.onSlide) W.onSlide(current, slides[current]);
+    showFwd();
+  }
+  slides.forEach(s => {
+    const g = gateOf(s); if (!g) return;
+    g.addEventListener('click', () => {
+      if (s.classList.contains('opened')) return;
+      s.classList.add('opened');
+      if (W.onOpen) W.onOpen(s);
+      showFwd(+(s.dataset.after || 1600));
+    });
+  });
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { slides.forEach(s => s.classList.remove('opened')); if (W.onRestart) W.onRestart(); go(0); });
+  window.addEventListener('resize', fit);
+  // preview helper: #N opens slide N; add "open" (e.g. #4open) to show a gated slide already opened
+  const start = parseInt(location.hash.slice(1), 10);
+  const target = start >= 1 && start <= slides.length ? start - 1 : 0;
+  if (location.hash.includes('open')) { slides[target].classList.add('opened'); if (W.onOpen) W.onOpen(slides[target]); }
+  go(target);
+  fit();
+</script>
+</body>
+</html>
