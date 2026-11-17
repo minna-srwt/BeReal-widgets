@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Taco Truck Analogy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #DFE9FC; --blue-200: #C2D5F9; --blue: #2550D0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .col { display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px; }
+  .sh { display: flex; align-items: center; gap: 14px; }
+  .sh .n { flex: none; min-width: 56px; height: 56px; padding: 0 8px; border-radius: 14px; border: 3px solid var(--black); background: var(--white); box-shadow: 4px 4px 0 var(--blue-200); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 32px; }
+  .sh h3 { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 34px; line-height: 1.1; }
+  .spacer { flex: 1; }
+  .callout { border: 3px solid var(--black); border-radius: 18px; padding: 14px 18px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); }
+  .vs { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); color: var(--white); font-family: 'DM Serif Text', serif; font-size: 25px; flex: none; }
+  .lab { font-size: 25px; font-weight: 700; line-height: 1.2; text-align: center; }
+  .pop-in { opacity: 0; transform: scale(.4); }
+  .slide.active .pop-in { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  @keyframes popin2 { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+
+  .street { position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-right: 104px; padding-bottom: 14px; }
+  .street::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 8px; border-radius: 4px; background: var(--gray); border: 2px solid var(--black); }
+  .ic { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .ic svg { display: block; }
+  .ic.you .lab { color: var(--blue); }
+  .drive { opacity: 0; transform: translateX(-420px); }
+  .slide.active .drive { animation: drivein 1.6s cubic-bezier(.2,.9,.3,1.1) .3s forwards; }
+  @keyframes drivein { 0% { opacity: 1; transform: translateX(-420px); } 80% { transform: translateX(10px); } 90% { transform: translateX(-4px) rotate(-1deg); } 100% { opacity: 1; transform: none; } }
+  .tight { gap: 12px; padding-bottom: 14px; }
+  .s1 { display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-bottom: 40px; }
+  .s1 .street { position: relative; margin-right: 104px; }
+  .s1 .street { justify-content: center; }
+  .s1 .street svg { width: 260px; }
+  .s1 .lunch { position: absolute; right: 30px; bottom: 30px; font-size: 25px; font-weight: 800; color: var(--blue); }
+  .alone { font-family: 'DM Serif Text', serif; font-size: 38px; line-height: 1.1; color: var(--blue); opacity: 0; transform: scale(1.15); }
+  .slide.active .alone { transition: opacity .4s ease 3.2s, transform .6s cubic-bezier(.3,1.5,.5,1) 3.2s; opacity: 1; transform: none; }
+  .qm { position: absolute; bottom: 30px; width: 70px; height: 70px; border-radius: 50%; border: 3px dashed var(--black); background: var(--blue-50); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 40px; opacity: 0; transform: scale(.3); }
+  .q1 { left: 20px; } .q2 { right: 110px; bottom: 90px; } .q3 { right: 10px; }
+  .slide.active .qm { animation: popin2 .45s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .slide.active .q1 { animation-delay: 2.4s; } .slide.active .q2 { animation-delay: 2.6s; } .slide.active .q3 { animation-delay: 2.8s; }
+  .slide.active .s1-street { }
+  .types { display: flex; flex-direction: column; gap: 10px; margin-right: 104px; }
+  .ty { display: grid; grid-template-columns: 172px 1fr; border: 3px solid var(--black); border-radius: 16px; overflow: hidden; background: var(--white); box-shadow: 5px 5px 0 var(--blue-200); }
+  .ty h4 { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 25px; line-height: 1.05; padding: 8px 10px; background: var(--blue); color: var(--white); border-right: 3px solid var(--black); display: flex; align-items: center; }
+  .ty p { font-size: 25px; line-height: 1.2; padding: 6px 12px; }
+  .slide.active .ty { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) both; }
+  .slide.active .ty:nth-child(1) { animation-delay: .8s; } .slide.active .ty:nth-child(2) { animation-delay: 1.2s; } .slide.active .ty:nth-child(3) { animation-delay: 1.6s; }
+  .scene { display: flex; align-items: flex-end; gap: 10px; margin-right: 104px; padding-bottom: 14px; position: relative; }
+  .scene::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 8px; border-radius: 4px; background: var(--gray); border: 2px solid var(--black); }
+  .scene svg { height: 100px; width: auto; }
+  .scene .road { flex: 1; align-self: stretch; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .scene .road i { width: 34px; height: 8px; background: var(--black); border-radius: 4px; }
+  .scene .arrive { opacity: 0; transform: translateY(-40px); }
+  .slide.active .scene .arrive { animation: land .6s cubic-bezier(.3,1.6,.5,1) .5s forwards; }
+  @keyframes land { to { opacity: 1; transform: none; } }
+  .scene .far svg { height: 78px; }
+  .def { font-size: 25px; line-height: 1.42; border-left: 6px solid var(--blue); padding: 6px 14px; background: var(--blue-50); margin-right: 104px; }
+  .ex { display: flex; flex-direction: column; gap: 10px; margin-right: 104px; }
+  .ex .kick { color: var(--black); text-transform: none; letter-spacing: 0; }
+  .pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; }
+  .pair span { border: 3px solid var(--black); border-radius: 14px; padding: 8px 12px; font-size: 25px; font-weight: 700; text-align: center; background: var(--white); }
+  .pair .note { grid-column: 1 / -1; border: 0; padding: 0 6px; font-weight: 400; font-style: italic; text-align: left; }
+  .slide.active .pair { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) both; }
+  .slide.active .pair:nth-of-type(1) { animation-delay: .5s; } .slide.active .pair:nth-of-type(2) { animation-delay: .9s; }
+  /* zero-sum: one customer, two sides */
+  .seesaw { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-right: 104px; }
+  .bin { position: relative; border: 3px solid var(--black); border-radius: 16px; height: 86px; display: flex; align-items: center; justify-content: center; font-size: 25px; font-weight: 800; background: var(--white); }
+  .bin.them { background: var(--blue-50); }
+  .token { position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: var(--blue); border: 3px solid var(--black); opacity: 0; }
+  .slide.active .zs .token { animation: hop 1.4s ease 2.2s forwards; }
+  @keyframes hop { 0% { opacity: 1; transform: translateX(-400px); } 55% { transform: translate(-200px, -46px); } 100% { opacity: 1; transform: none; } }
+  .slide.active .both .token.a { animation: tok 1s ease 2s forwards; } .slide.active .both .token.b { animation: tok 1s ease 2.6s forwards; }
+  @keyframes tok { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: none; } }
+  .zs .token { left: 82%; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+
+  <section class="slide s1 active" aria-live="polite" data-hand="4600">
+    <p class="auto pad">Picture this: you've finally launched your dream taco truck, serving the best tacos in town. Secret sauces, fresh tortillas, the works. You park in a busy downtown spot, ready to own lunch hour.</p>
+    <div class="street"><span class="qm q1">?</span><div class="ic you drive"><svg viewBox="0 0 170 112" aria-hidden="true"><rect x="52" y="8" width="46" height="30" rx="5" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M58 30 a17 17 0 0 1 34 0 z" fill="#2550D0" stroke="#000" stroke-width="3"/><path d="M62 30 q4 -5 8 0 q4 -5 8 0 q4 -5 8 0" fill="none" stroke="#FFF" stroke-width="2.5"/><rect x="8" y="38" width="118" height="54" rx="8" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M126 52 h22 l14 18 v22 h-36 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M132 57 h13 l9 12 h-22 z" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="22" y="50" width="70" height="24" rx="3" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M18 50 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="38" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="138" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">You</span></div><span class="qm q2">?</span><span class="qm q3">?</span></div>
+    <p class="alone pad">Then you look around and realize: you're not alone.</p>
+  </section>
+
+  <section class="slide col" data-hand="3200">
+    <p class="auto pad">To stand out, you first have to map your competition. Here are the three main types you'll face:</p>
+    <div class="types">
+      <div class="ty"><h4>Direct competitors</h4><p>Businesses offering the same product or services in the same niche or target market.</p></div>
+      <div class="ty"><h4>Indirect competitors</h4><p>Businesses solving the same problem with a different product or service but compete for the same customers.</p></div>
+      <div class="ty"><h4>Replacement competitors</h4><p>Also called substitute competitors, they offer an alternative product that customers might use instead of yours.</p></div>
+    </div>
+  </section>
+
+  <section class="slide col">
+    <div class="sh auto"><span class="n">1</span><h3>Direct Competitors</h3></div>
+    <div class="scene auto">
+      <div class="ic you"><svg viewBox="0 0 170 112" aria-hidden="true"><rect x="52" y="8" width="46" height="30" rx="5" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M58 30 a17 17 0 0 1 34 0 z" fill="#2550D0" stroke="#000" stroke-width="3"/><path d="M62 30 q4 -5 8 0 q4 -5 8 0 q4 -5 8 0" fill="none" stroke="#FFF" stroke-width="2.5"/><rect x="8" y="38" width="118" height="54" rx="8" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M126 52 h22 l14 18 v22 h-36 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M132 57 h13 l9 12 h-22 z" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="22" y="50" width="70" height="24" rx="3" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M18 50 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="38" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="138" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">You</span></div>
+      <div class="road"><i></i><i></i><i></i></div>
+      <div class="ic arrive"><svg viewBox="0 0 170 112" aria-hidden="true"><rect x="16" y="34" width="138" height="72" rx="4" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="40" y="6" width="90" height="28" rx="6" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M68 30 a17 17 0 0 1 34 0 z" fill="#2550D0" stroke="#000" stroke-width="3"/><path d="M12 34 h146 l-8 16 h-130 z" fill="#C2D5F9" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="30" y="58" width="48" height="34" rx="3" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="96" y="58" width="40" height="48" rx="3" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">Taco Bell</span></div>
+    </div>
+    <p class="auto d1 pad">Across the street sits Taco Bell, serving tacos too. Maybe not as fresh as yours, but familiar and fast. You're both after the same customers craving tacos. Every taco they sell could have been yours.</p>
+    <p class="def auto d2">That's a <b>direct competitor</b>: someone solving the <i>same problem</i>, for the <i>same people</i>, in almost the <i>same way</i>.</p>
+  </section>
+
+  <section class="slide col" data-hand="3800">
+    <div class="sh auto"><span class="n">1</span><h3>Direct Competitors</h3></div>
+    <div class="ex"><span class="kick auto">Examples:</span>
+      <div class="pair"><span>McDonald's</span><b class="vs">vs.</b><span>Burger King</span></div>
+      <div class="pair"><span>Uber</span><b class="vs">vs.</b><span>Lyft</span></div>
+    </div>
+    <p class="auto d3 pad">It's often a <b>zero-sum game</b>: if users choose them, they're not choosing you.</p>
+    <div class="seesaw zs auto d3"><div class="bin">You</div><div class="bin them">Them<span class="token"></span></div></div>
+  </section>
+
+  <section class="slide col">
+    <div class="sh auto"><span class="n">2</span><h3>Indirect Competitors</h3></div>
+    <div class="scene auto">
+      <div class="ic you"><svg viewBox="0 0 170 112" aria-hidden="true"><rect x="52" y="8" width="46" height="30" rx="5" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M58 30 a17 17 0 0 1 34 0 z" fill="#2550D0" stroke="#000" stroke-width="3"/><path d="M62 30 q4 -5 8 0 q4 -5 8 0 q4 -5 8 0" fill="none" stroke="#FFF" stroke-width="2.5"/><rect x="8" y="38" width="118" height="54" rx="8" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M126 52 h22 l14 18 v22 h-36 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M132 57 h13 l9 12 h-22 z" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="22" y="50" width="70" height="24" rx="3" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M18 50 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="38" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="138" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">You</span></div>
+      <div class="road"><i></i><i></i><i></i><i></i></div>
+      <div class="ic far arrive"><svg viewBox="0 0 170 112" aria-hidden="true"><rect x="52" y="8" width="46" height="30" rx="5" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M60 22 a15 9 0 0 1 30 0 z" fill="#C2D5F9" stroke="#000" stroke-width="3"/><rect x="59" y="23" width="32" height="4" rx="2" fill="#2550D0" stroke="#000" stroke-width="2"/><rect x="60" y="28" width="30" height="5" rx="2.5" fill="#FFF" stroke="#000" stroke-width="3"/><rect x="8" y="38" width="118" height="54" rx="8" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M126 52 h22 l14 18 v22 h-36 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M132 57 h13 l9 12 h-22 z" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="22" y="50" width="70" height="24" rx="3" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M18 50 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="38" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="138" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">Burger truck</span></div>
+    </div>
+    <p class="auto d1 pad">Down the block, you notice a burger truck. Different food, same goal: feeding hungry people fast. That's <b>indirect competition</b>.</p>
+    <p class="def auto d2">An indirect competitor serves a <b>similar need</b>, but in a different way. For the lunch crowd, tacos and burgers both scratch the same itch.</p>
+  </section>
+
+  <section class="slide col" data-hand="3600">
+    <div class="sh auto"><span class="n">2</span><h3>Indirect Competitors</h3></div>
+    <div class="ex"><span class="kick auto">Examples:</span>
+      <div class="pair"><span>Netflix</span><b class="vs">vs.</b><span>YouTube</span><span class="note">(competing for screen time, not the same product)</span></div>
+      <div class="pair"><span>Calm</span><b class="vs">vs.</b><span>Spotify</span><span class="note">(both compete for your relaxation time)</span></div>
+    </div>
+    <p class="auto d3 pad">Indirect competition isn't always zero-sum. People might use both, depending on their mood.</p>
+  </section>
+
+  <section class="slide col">
+    <div class="sh auto"><span class="n">3</span><h3>Substitute Competitors (or Replacement Competitors)</h3></div>
+    <div class="scene auto">
+      <div class="ic you"><svg viewBox="0 0 170 112" aria-hidden="true"><rect x="52" y="8" width="46" height="30" rx="5" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M58 30 a17 17 0 0 1 34 0 z" fill="#2550D0" stroke="#000" stroke-width="3"/><path d="M62 30 q4 -5 8 0 q4 -5 8 0 q4 -5 8 0" fill="none" stroke="#FFF" stroke-width="2.5"/><rect x="8" y="38" width="118" height="54" rx="8" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M126 52 h22 l14 18 v22 h-36 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M132 57 h13 l9 12 h-22 z" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="22" y="50" width="70" height="24" rx="3" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M18 50 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="38" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="138" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">You</span></div>
+      <div class="road"><i></i><i></i></div>
+      <div class="ic arrive"><svg viewBox="0 0 110 130" aria-hidden="true"><rect x="12" y="6" width="86" height="118" rx="6" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="20" y="14" width="52" height="80" rx="3" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><line x1="20" y1="40" x2="72" y2="40" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><line x1="20" y1="66" x2="72" y2="66" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="27" y="22" width="12" height="14" rx="2" fill="#2550D0" stroke="#000" stroke-width="2.5"/><rect x="48" y="24" width="14" height="12" rx="2" fill="#FFF" stroke="#000" stroke-width="2.5"/><rect x="28" y="48" width="14" height="14" rx="2" fill="#FFF" stroke="#000" stroke-width="2.5"/><rect x="50" y="46" width="12" height="16" rx="2" fill="#2550D0" stroke="#000" stroke-width="2.5"/><rect x="78" y="22" width="12" height="20" rx="2" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="24" y="104" width="62" height="12" rx="3" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">Vending machine</span></div>
+    </div>
+    <p class="auto d1 pad">Then you spot a <b>vending machine</b> selling sandwiches and snacks. It's not a restaurant, but it solves the same core problem: <i>hunger</i>.</p>
+    <p class="def auto d2">That's a <b>substitute competitor</b>: a totally different solution to the same need.</p>
+  </section>
+
+  <section class="slide col">
+    <div class="sh auto"><span class="n">3</span><h3>Substitute Competitors (or Replacement Competitors)</h3></div>
+    <div class="ex"><span class="kick auto">Examples:</span>
+      <div class="pair"><span>Public transit</span><b class="vs">vs.</b><span>bike sharing</span></div>
+      <div class="pair"><span>Zoom</span><b class="vs">vs.</b><span>in-person meetings</span></div>
+    </div>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg>
+</div>
+
+<script>
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    placeHand();
+  }
+  const W = window.W || {};
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd'), back = document.getElementById('back'), hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  const gateOf = s => s.dataset.gate ? s.querySelector(s.dataset.gate) : null;
+  const locked = s => !!s.dataset.gate && !s.classList.contains('opened');
+  // until a gate is tapped the hand points at it; otherwise it points at the forward arrow
+  function placeHand() {
+    const s = slides[current], g = locked(s) ? gateOf(s) : null;
+    hand.classList.toggle('on-gate', !!g);
+    if (g) {
+      const c = canvas.getBoundingClientRect(), r = g.getBoundingClientRect(), k = c.width / canvas.offsetWidth;
+      hand.style.left = ((r.left + r.width * 0.65 - c.left) / k) + 'px';
+      hand.style.top = ((r.top + r.height * 0.55 - c.top) / k) + 'px';
+    } else { hand.style.left = ''; hand.style.top = ''; }
+  }
+  function showFwd(delay) {
+    const s = slides[current];
+    fwd.classList.toggle('hidden', current === slides.length - 1 || locked(s));
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1 || locked(s)) handTimer = setTimeout(() => { placeHand(); hand.style.opacity = 1; }, delay != null ? delay : +(s.dataset.hand || 2600));
+  }
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    // load a clip only on its slide, and unload it when leaving so it stops playing
+    document.querySelectorAll('iframe[data-src]').forEach(f => {
+      const on = f.closest('.slide') === slides[current];
+      if (on && !f.getAttribute('src')) f.src = f.dataset.src; else if (!on && f.getAttribute('src')) f.removeAttribute('src');
+    });
+    if (W.onSlide) W.onSlide(current, slides[current]);
+    showFwd();
+  }
+  slides.forEach(s => {
+    const g = gateOf(s); if (!g) return;
+    g.addEventListener('click', () => {
+      if (s.classList.contains('opened')) return;
+      s.classList.add('opened');
+      if (W.onOpen) W.onOpen(s);
+      showFwd(+(s.dataset.after || 1600));
+    });
+  });
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { slides.forEach(s => s.classList.remove('opened')); if (W.onRestart) W.onRestart(); go(0); });
+  window.addEventListener('resize', fit);
+  // preview helper: #N opens slide N; add "open" (e.g. #4open) to show a gated slide already opened
+  const start = parseInt(location.hash.slice(1), 10);
+  const target = start >= 1 && start <= slides.length ? start - 1 : 0;
+  if (location.hash.includes('open')) { slides[target].classList.add('opened'); if (W.onOpen) W.onOpen(slides[target]); }
+  go(target);
+  fit();
+</script>
+</body>
+</html>
