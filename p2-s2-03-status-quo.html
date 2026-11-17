@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Status Quo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #DFE9FC; --blue-200: #C2D5F9; --blue: #2550D0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .col { display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px; }
+  .sh { display: flex; align-items: center; gap: 14px; }
+  .sh .n { flex: none; min-width: 56px; height: 56px; padding: 0 8px; border-radius: 14px; border: 3px solid var(--black); background: var(--white); box-shadow: 4px 4px 0 var(--blue-200); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 32px; }
+  .sh h3 { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 34px; line-height: 1.1; }
+  .spacer { flex: 1; }
+  .callout { border: 3px solid var(--black); border-radius: 18px; padding: 14px 18px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); }
+  .vs { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); color: var(--white); font-family: 'DM Serif Text', serif; font-size: 25px; flex: none; }
+  .lab { font-size: 25px; font-weight: 700; line-height: 1.2; text-align: center; }
+  .pop-in { opacity: 0; transform: scale(.4); }
+  .slide.active .pop-in { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  @keyframes popin2 { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+
+  .tc { align-self: flex-start; }
+  .face { display: flex; align-items: flex-end; justify-content: center; gap: 30px; margin-right: 104px; height: 170px; position: relative; }
+  .card { width: 190px; border: 3px solid var(--black); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--white); }
+  .card svg { height: 80px; width: auto; }
+  .card.hs { background: var(--blue-50); box-shadow: 6px 6px 0 var(--blue); }
+  .card .lab { font-size: 25px; }
+  .zd { position: absolute; right: 70px; bottom: 0; }
+  .em { position: absolute; right: 70px; bottom: 0; opacity: 0; transform: translateY(-160px); }
+  .slide.active .zd { animation: falloff .7s ease-in 2.4s forwards; }
+  @keyframes falloff { to { opacity: 0; transform: translateY(120px) rotate(25deg); } }
+  .slide.active .em { animation: dropin .6s cubic-bezier(.3,1.6,.5,1) 3s forwards; }
+  @keyframes dropin { to { opacity: 1; transform: none; } }
+  .face .hs { position: absolute; left: 70px; bottom: 0; }
+  .line { position: absolute; left: 270px; right: 270px; bottom: 60px; height: 0; border-top: 4px dashed var(--black); }
+  .alts { display: flex; align-items: stretch; gap: 10px; margin-right: 104px; }
+  .alt { flex: 1; border: 3px solid var(--black); border-radius: 14px; padding: 10px; font-size: 25px; font-weight: 700; text-align: center; background: var(--white); display: flex; align-items: center; justify-content: center; opacity: .35; }
+  .alt.sq { flex: 1.3; border-style: dashed; opacity: .35; }
+  .slide.active .alt { transition: opacity .4s ease; opacity: 1; }
+  .slide.active .alt:nth-child(1) { transition-delay: .9s; } .slide.active .alt:nth-child(2) { transition-delay: 1.2s; }
+  .slide.active .alt.sq { transition: opacity .4s ease 2.2s, background .4s ease 2.2s, box-shadow .4s ease 2.2s; background: var(--blue-50); box-shadow: 6px 6px 0 var(--blue); border-style: solid; }
+  .brace { margin-right: 104px; border: 3px solid var(--black); border-bottom: 0; height: 14px; border-radius: 10px 10px 0 0; position: relative; }
+  .brace span { position: absolute; left: 50%; top: -22px; transform: translateX(-50%); background: var(--white); padding: 0 10px; font-size: 25px; font-weight: 800; color: var(--blue); white-space: nowrap; }
+  .deals { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; margin-right: 104px; }
+  .deal { height: 70px; border: 3px solid var(--black); border-radius: 10px; background: var(--white); display: flex; align-items: center; justify-content: center; font-size: 25px; }
+  .deal.lost { position: relative; }
+  .deal.lost::after { content: ''; position: absolute; inset: -3px; border-radius: 10px; border: 3px solid var(--black); background: var(--blue); transform: scaleY(0); transform-origin: top; }
+  .slide.active .deal.lost::after { transition: transform .35s ease; transform: scaleY(1); }
+  .slide.active .deal.lost:nth-child(1)::after { transition-delay: 1.4s; } .slide.active .deal.lost:nth-child(2)::after { transition-delay: 1.7s; } .slide.active .deal.lost:nth-child(3)::after { transition-delay: 2s; } .slide.active .deal.lost:nth-child(4)::after { transition-delay: 2.3s; }
+  .pct { display: flex; align-items: baseline; gap: 14px; }
+  .pct .num { font-family: 'DM Serif Text', serif; font-size: 64px; line-height: 1; color: var(--blue); }
+  .pct .of { font-size: 25px; font-weight: 700; }
+  .nothing { font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.15; margin-right: 104px; opacity: 0; transform: scale(1.15); }
+  .slide.active .nothing { transition: opacity .4s ease 3.2s, transform .6s cubic-bezier(.3,1.5,.5,1) 3.2s; opacity: 1; transform: none; }
+  .nothing b { font-weight: 400; color: var(--blue); }
+  .lineup { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; align-items: end; margin-right: 104px; }
+  .lineup .ic { display: flex; flex-direction: column; align-items: center; gap: 4px; opacity: 0; transform: translateY(20px); }
+  .lineup svg { height: 84px; width: auto; }
+  .slide.active .lineup .ic { transition: opacity .4s ease, transform .5s cubic-bezier(.3,1.5,.5,1); opacity: 1; transform: none; }
+  .slide.active .lineup .ic:nth-child(1) { transition-delay: .3s; } .slide.active .lineup .ic:nth-child(2) { transition-delay: .6s; } .slide.active .lineup .ic:nth-child(3) { transition-delay: .9s; } .slide.active .lineup .ic:nth-child(4) { transition-delay: 1.5s; }
+  .lineup .sq { position: relative; }
+  .ring { position: absolute; left: 50%; top: -10px; width: 150px; height: 120px; transform: translateX(-50%); overflow: visible; }
+  .ring ellipse { fill: none; stroke: var(--blue); stroke-width: 6; stroke-dasharray: 440; stroke-dashoffset: 440; }
+  .slide.active .ring ellipse { transition: stroke-dashoffset .8s ease 2s; stroke-dashoffset: 0; }
+  .lineup .lab { font-size: 25px; font-weight: 600; }
+  .lineup .sq .lab { font-weight: 800; }
+  .tough { font-size: 25px; font-style: italic; text-align: right; margin-right: 104px; color: var(--blue); font-weight: 700; opacity: 0; }
+  .slide.active .tough { transition: opacity .4s ease 2.8s; opacity: 1; }
+  .q { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.12; margin-right: 104px; }
+  .q i { color: var(--blue); }
+  .instead { display: flex; flex-wrap: wrap; gap: 10px; margin-right: 104px; }
+  .instead span { border: 3px solid var(--black); border-radius: 999px; padding: 6px 16px; font-size: 25px; font-weight: 700; background: var(--white); opacity: 0; transform: scale(.4); }
+  .slide.active .instead span { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .slide.active .instead span:nth-child(1) { animation-delay: 1.6s; } .slide.active .instead span:nth-child(2) { animation-delay: 2s; } .slide.active .instead span:nth-child(3) { animation-delay: 2.4s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+
+  <section class="slide col active" aria-live="polite" data-hand="4000">
+    <div class="title-card tc">📌 The competitor nobody puts on the list</div>
+    <p class="auto d2 pad">Remember Help Scout? April Dunford pointed out that it often wasn't replacing Zendesk at all. It was replacing <i>just email</i>.</p>
+    <div class="face auto d2">
+      <div class="card hs"><svg viewBox="0 0 80 80" aria-hidden="true"><rect x="6" y="6" width="68" height="68" rx="18" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">Help Scout</span></div>
+      <div class="line"></div>
+      <div class="card zd"><svg viewBox="0 0 80 80" aria-hidden="true"><rect x="6" y="6" width="68" height="68" rx="18" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">Zendesk</span></div>
+      <div class="card em"><svg viewBox="0 0 120 90" aria-hidden="true"><rect x="8" y="10" width="104" height="70" rx="8" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 14 l50 38 l50 -38" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">just email</span></div>
+    </div>
+  </section>
+
+  <section class="slide col" data-hand="3000">
+    <p class="auto pad">April calls everything a product has to beat its <b>competitive alternatives</b>. The most overlooked one is the <b>status quo</b>: whatever people are doing <i>right now</i> instead of using any product at all, even if it's clunky.</p>
+    <div class="spacer"></div>
+    <div class="brace auto d1"><span>competitive alternatives</span></div>
+    <div class="alts">
+      <div class="alt">Zendesk</div>
+      <div class="alt">Other help-desk tools</div>
+      <div class="alt sq">✉️ the status quo: just email</div>
+    </div>
+    <div class="spacer"></div>
+  </section>
+
+  <section class="slide col" data-hand="4200">
+    <p class="auto pad">Here's why it matters. In April's world of business software, she says companies lose about <b>40% of their deals</b> not to a rival, but to "no decision." In her words, they "lost to the spreadsheet... lost to pen and paper."</p>
+    <div class="pct auto d1"><span class="num" id="pct">0%</span><span class="of">of deals lost to "no decision"</span></div>
+    <div class="deals auto d1"><div class="deal lost"></div><div class="deal lost"></div><div class="deal lost"></div><div class="deal lost"></div><div class="deal"></div><div class="deal"></div><div class="deal"></div><div class="deal"></div><div class="deal"></div><div class="deal"></div></div>
+    <p class="nothing">In other words, the biggest competitor was <b>nothing new at all.</b></p>
+  </section>
+
+  <section class="slide vslide">
+    <div class="vwrap auto"><div class="video"><iframe data-src="https://www.youtube.com/embed/hdjlCLb9Hl8?start=1241&amp;end=1364" title="April Dunford on losing to no decision" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></div>
+  </section>
+
+  <section class="slide col" data-hand="3600">
+    <div class="lineup">
+      <div class="ic"><svg viewBox="0 0 170 112" aria-hidden="true"><rect x="52" y="8" width="46" height="30" rx="5" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M58 30 a17 17 0 0 1 34 0 z" fill="#2550D0" stroke="#000" stroke-width="3"/><path d="M62 30 q4 -5 8 0 q4 -5 8 0 q4 -5 8 0" fill="none" stroke="#FFF" stroke-width="2.5"/><rect x="8" y="38" width="118" height="54" rx="8" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M126 52 h22 l14 18 v22 h-36 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M132 57 h13 l9 12 h-22 z" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="22" y="50" width="70" height="24" rx="3" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M18 50 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="38" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="138" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">Taco Bell: direct</span></div>
+      <div class="ic"><svg viewBox="0 0 170 112" aria-hidden="true"><rect x="52" y="8" width="46" height="30" rx="5" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M60 22 a15 9 0 0 1 30 0 z" fill="#C2D5F9" stroke="#000" stroke-width="3"/><rect x="59" y="23" width="32" height="4" rx="2" fill="#2550D0" stroke="#000" stroke-width="2"/><rect x="60" y="28" width="30" height="5" rx="2.5" fill="#FFF" stroke="#000" stroke-width="3"/><rect x="8" y="38" width="118" height="54" rx="8" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M126 52 h22 l14 18 v22 h-36 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M132 57 h13 l9 12 h-22 z" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="22" y="50" width="70" height="24" rx="3" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M18 50 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0 q6 8 12 0" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="38" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="138" cy="94" r="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">Burger truck: indirect</span></div>
+      <div class="ic"><svg viewBox="0 0 110 130" aria-hidden="true"><rect x="12" y="6" width="86" height="118" rx="6" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="20" y="14" width="52" height="80" rx="3" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><line x1="20" y1="40" x2="72" y2="40" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><line x1="20" y1="66" x2="72" y2="66" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="27" y="22" width="12" height="14" rx="2" fill="#2550D0" stroke="#000" stroke-width="2.5"/><rect x="48" y="24" width="14" height="12" rx="2" fill="#FFF" stroke="#000" stroke-width="2.5"/><rect x="28" y="48" width="14" height="14" rx="2" fill="#FFF" stroke="#000" stroke-width="2.5"/><rect x="50" y="46" width="12" height="16" rx="2" fill="#2550D0" stroke="#000" stroke-width="2.5"/><rect x="78" y="22" width="12" height="20" rx="2" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="24" y="104" width="62" height="12" rx="3" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">Vending machine: substitute</span></div>
+      <div class="ic sq"><svg class="ring" viewBox="0 0 150 120" aria-hidden="true"><ellipse cx="75" cy="60" rx="70" ry="55"/></svg><svg viewBox="0 0 130 112" aria-hidden="true"><path d="M44 30 v-12 h30 v12" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="14" y="30" width="90" height="66" rx="12" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="24" y="40" width="70" height="46" rx="8" fill="#DFE9FC" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M116 34 v22 m-6 -22 v14 q0 8 6 8 q6 0 6 -8 v-14 M116 56 v42" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="lab">Leftovers from home: the status quo</span></div>
+    </div>
+    <p class="tough">Often the toughest one to beat.</p>
+    <p class="auto d4 pad">Back at the taco truck, that's the office worker who just eats yesterday's leftovers at their desk. No truck, no vending machine. Just the easy, familiar option.</p>
+  </section>
+
+  <section class="slide col">
+    <p class="auto pad">April's 40% number comes from business software, not social apps. But the question carries over perfectly:</p>
+    <p class="q slam"><b style="font-weight:400">When someone <i>doesn't</i> open BeReal, what are they doing instead?</b></p>
+    <div class="instead"><span>Texting the group chat?</span><span>Sending a Snapchat?</span><span>Not sharing anything at all?</span></div>
+    <p class="auto d5 pad">Keep that question in mind. You'll need it soon.</p>
+  </section>
+
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg>
+</div>
+
+<script>
+  // count the 40% up when its slide opens
+  window.W = { onSlide: (i, s) => {
+    const el = document.getElementById('pct');
+    if (!s.contains(el)) return;
+    el.textContent = '0%';
+    const t0 = performance.now() + 1300;
+    const tick = now => { const p = Math.min(1, Math.max(0, (now - t0) / 1200)); el.textContent = Math.round(40 * p) + '%'; if (p < 1 && s.classList.contains('active')) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+    setTimeout(() => { if (s.classList.contains('active')) el.textContent = '40%'; }, 2700);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) el.textContent = '40%';
+  } };
+
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    placeHand();
+  }
+  const W = window.W || {};
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd'), back = document.getElementById('back'), hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  const gateOf = s => s.dataset.gate ? s.querySelector(s.dataset.gate) : null;
+  const locked = s => !!s.dataset.gate && !s.classList.contains('opened');
+  // until a gate is tapped the hand points at it; otherwise it points at the forward arrow
+  function placeHand() {
+    const s = slides[current], g = locked(s) ? gateOf(s) : null;
+    hand.classList.toggle('on-gate', !!g);
+    if (g) {
+      const c = canvas.getBoundingClientRect(), r = g.getBoundingClientRect(), k = c.width / canvas.offsetWidth;
+      hand.style.left = ((r.left + r.width * 0.65 - c.left) / k) + 'px';
+      hand.style.top = ((r.top + r.height * 0.55 - c.top) / k) + 'px';
+    } else { hand.style.left = ''; hand.style.top = ''; }
+  }
+  function showFwd(delay) {
+    const s = slides[current];
+    fwd.classList.toggle('hidden', current === slides.length - 1 || locked(s));
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1 || locked(s)) handTimer = setTimeout(() => { placeHand(); hand.style.opacity = 1; }, delay != null ? delay : +(s.dataset.hand || 2600));
+  }
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    // load a clip only on its slide, and unload it when leaving so it stops playing
+    document.querySelectorAll('iframe[data-src]').forEach(f => {
+      const on = f.closest('.slide') === slides[current];
+      if (on && !f.getAttribute('src')) f.src = f.dataset.src; else if (!on && f.getAttribute('src')) f.removeAttribute('src');
+    });
+    if (W.onSlide) W.onSlide(current, slides[current]);
+    showFwd();
+  }
+  slides.forEach(s => {
+    const g = gateOf(s); if (!g) return;
+    g.addEventListener('click', () => {
+      if (s.classList.contains('opened')) return;
+      s.classList.add('opened');
+      if (W.onOpen) W.onOpen(s);
+      showFwd(+(s.dataset.after || 1600));
+    });
+  });
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { slides.forEach(s => s.classList.remove('opened')); if (W.onRestart) W.onRestart(); go(0); });
+  window.addEventListener('resize', fit);
+  // preview helper: #N opens slide N; add "open" (e.g. #4open) to show a gated slide already opened
+  const start = parseInt(location.hash.slice(1), 10);
+  const target = start >= 1 && start <= slides.length ? start - 1 : 0;
+  if (location.hash.includes('open')) { slides[target].classList.add('opened'); if (W.onOpen) W.onOpen(slides[target]); }
+  go(target);
+  fit();
+</script>
+</body>
+</html>
