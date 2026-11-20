@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loading and Success States</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #DFE9FC; --blue-200: #C2D5F9; --blue: #2550D0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .col { display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px; }
+  .sh { display: flex; align-items: center; gap: 14px; }
+  .sh .n { flex: none; min-width: 56px; height: 56px; padding: 0 8px; border-radius: 14px; border: 3px solid var(--black); background: var(--white); box-shadow: 4px 4px 0 var(--blue-200); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 32px; }
+  .sh h3 { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 34px; line-height: 1.1; }
+  .spacer { flex: 1; }
+  .callout { border: 3px solid var(--black); border-radius: 18px; padding: 14px 18px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); }
+  .vs { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); color: var(--white); font-family: 'DM Serif Text', serif; font-size: 25px; flex: none; }
+  .lab { font-size: 25px; font-weight: 700; line-height: 1.2; text-align: center; }
+  .pop-in { opacity: 0; transform: scale(.4); }
+  .slide.active .pop-in { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  @keyframes popin2 { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+
+  .help { position: relative; display: flex; gap: 12px; padding-right: 110px; }
+  .hbtn { font: inherit; font-size: 16px; font-weight: 700; padding: 9px 16px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; }
+  .hbtn[aria-expanded="true"] { background: var(--black); color: var(--white); }
+  .pop { position: absolute; left: 0; right: 110px; bottom: calc(100% + 10px); display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--white); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .25s, transform .25s; box-shadow: 0 8px 24px rgba(0,0,0,.15); z-index: 4; }
+  .pop.check { border: 3px solid var(--black); } .pop.stuck { border: 3px dashed var(--black); }
+  .pop.show { opacity: 1; transform: none; pointer-events: auto; }
+
+  .slide, .page { font-size: 25px; line-height: 1.42; }
+  .tplbtn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: var(--white); border: 2.5px solid var(--black); color: var(--black); font-size: 16px; font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--blue); white-space: nowrap; }
+  .tplbtn:hover { background: var(--black); color: var(--white); }
+  .tplbtn:hover svg path, .tplbtn:hover svg line { stroke: var(--white); }
+  .s1 { display: flex; flex-direction: column; justify-content: center; gap: 16px; padding-bottom: 30px; }
+  .art { display: flex; justify-content: center; align-items: center; margin-right: 104px; }
+  .art svg { max-height: 150px; width: auto; max-width: 100%; }
+  .check { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border: 3px solid var(--black); border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--blue-50); }
+  .where { align-self: flex-start; font-size: 25px; font-weight: 700; padding: 4px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--blue-50); color: var(--blue); }
+  .bul { display: flex; flex-direction: column; gap: 8px; margin-right: 104px; }
+  .bul li { list-style: none; position: relative; padding-left: 34px; line-height: 1.32; }
+  .bul li::before { content: ''; position: absolute; left: 6px; top: 12px; width: 13px; height: 13px; border-radius: 4px; background: var(--blue); border: 2px solid var(--black); }
+  .quote { border-left: 8px solid var(--blue); padding: 6px 0 6px 20px; margin-right: 104px; font-family: 'DM Serif Text', serif; font-size: 34px; line-height: 1.2; }
+  .attr { font-size: 25px; margin-right: 104px; }
+  .tabs3 { display: flex; flex-wrap: wrap; gap: 10px; margin-right: 104px; }
+  .tab3 { font: inherit; font-size: 25px; font-weight: 800; padding: 6px 16px; border-radius: 999px; border: 3px solid var(--black); background: var(--white); cursor: pointer; }
+  .tab3[aria-selected="true"] { background: var(--blue); color: var(--white); }
+  .pane3 { display: none; } .pane3.on { display: flex; }
+  .card3 { flex-direction: column; gap: 10px; border: 3px solid var(--black); border-radius: 18px; padding: 12px 16px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); margin-right: 104px; }
+  .fld b { display: block; font-size: 25px; font-weight: 800; color: var(--blue); line-height: 1.2; }
+  .fld span { line-height: 1.32; }
+  .bubble { border: 3px solid var(--black); border-radius: 18px 18px 18px 4px; padding: 12px 16px; background: var(--blue-50); font-style: italic; font-size: 25px; line-height: 1.4; margin-right: 104px; }
+  .copy[aria-pressed="true"] { background: var(--blue); color: var(--white); }
+  .copyrow { display: flex; gap: 12px; align-items: center; }
+  .tb { border-collapse: separate; border-spacing: 0; margin-right: 104px; width: calc(100% - 104px); }
+  .tb th, .tb td { border: 2.5px solid var(--black); padding: 8px 10px; font-size: 25px; line-height: 1.25; text-align: left; vertical-align: top; }
+  .tb th { background: var(--blue-50); } .tb th.new { background: var(--blue); color: var(--white); }
+  .ppl { display: flex; justify-content: center; gap: 22px; margin-right: 104px; }
+  .ppl svg { height: 150px; width: auto; }
+  .ppl .bub { opacity: 0; transform: scale(.3); transform-origin: 50% 80%; }
+  .slide.active .ppl .bub { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .slide.active .ppl .pp:nth-child(1) .bub { animation-delay: .5s; } .slide.active .ppl .pp:nth-child(2) .bub { animation-delay: .8s; } .slide.active .ppl .pp:nth-child(3) .bub { animation-delay: 1.1s; } .slide.active .ppl .pp:nth-child(4) .bub { animation-delay: 2.4s; }
+  .ai-line { font-size: 25px; line-height: 1.38; margin-right: 104px; }
+
+  .op { display: flex; gap: 22px; padding-bottom: 30px; }
+  .op.top { flex-direction: column; justify-content: center; }
+  .op.bottom { flex-direction: column-reverse; justify-content: center; }
+  .op.left { flex-direction: row-reverse; align-items: center; }
+  .op.right { flex-direction: row; align-items: center; }
+  .op.center { flex-direction: column; justify-content: center; align-items: center; }
+  .op .txt { display: flex; flex-direction: column; gap: 16px; }
+  .op.left .txt, .op.right .txt { flex: 1; min-width: 0; }
+  .op.top .txt, .op.bottom .txt { margin-right: 104px; }
+  .op .stmt { font-size: 44px; line-height: 1.14; }
+  .op .stmt.long { font-size: 38px; }
+  .scene { position: relative; flex: none; }
+  .op.top .scene, .op.bottom .scene { align-self: center; margin-right: 104px; }
+  .hookrest { margin-right: 0; }
+  .u { position: absolute; }
+  @keyframes p_pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: scale(1); } }
+  @keyframes p_up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+  @keyframes p_fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes p_draw { to { stroke-dashoffset: 0; } }
+  @keyframes p_bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes p_stamp { 0% { opacity: 0; transform: scale(2.4) rotate(-14deg); } 60% { opacity: 1; transform: scale(.9) rotate(-6deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }
+  @keyframes p_shake { 0%,100% { transform: translate(0,0) rotate(0); } 20% { transform: translate(-5px,2px) rotate(-3deg); } 40% { transform: translate(5px,-2px) rotate(3deg); } 60% { transform: translate(-4px,1px) rotate(-2deg); } 80% { transform: translate(3px,-1px) rotate(2deg); } }
+
+  .slide { padding: 66px 40px 26px; }
+  /* ================= ACT SLIDE ================= */
+  .act { padding: 60px 0 0; }
+  .act .stage { position: absolute; inset: 60px 0 0 0; display: flex; align-items: center; justify-content: center; gap: 56px; padding: 0 120px 20px 40px; background: #F4F4F4; }
+  .slide.active.act .stage { animation: a_bg 1s ease 4s forwards; } @keyframes a_bg { to { background: var(--blue-50); } }
+  .act .titles { display: flex; flex-direction: column; gap: 14px; width: 330px; flex: none; }
+  .tc { border: 4px solid var(--black); border-radius: 18px; padding: 10px 16px; background: var(--white); display: flex; flex-direction: column; gap: 2px; opacity: 0; }
+  .tc .k { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .tc b { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 36px; line-height: 1.05; }
+  .tc i { font-style: normal; font-size: 26px; font-weight: 700; }
+  .slide.active .tc.t1 { animation: a_drop .6s cubic-bezier(.3,1.5,.5,1) .3s forwards, a_dim .5s ease 4s forwards; }
+  @keyframes a_drop { from { opacity: 0; transform: translateY(-80px) rotate(-4deg); } to { opacity: 1; transform: rotate(-1.5deg); } }
+  @keyframes a_dim { to { opacity: .45; transform: scale(.94) rotate(-1.5deg); } }
+  .tc.t2 { background: var(--white); color: var(--black); border-style: dashed; } .tc.t2 .k { color: inherit; opacity: .8; }
+  .slide.active .tc.t2 { animation: a_ghost .5s ease .8s forwards, a_fill .6s cubic-bezier(.3,1.6,.5,1) 4.3s forwards; }
+  @keyframes a_ghost { from { opacity: 0; transform: translateY(30px); } to { opacity: .5; transform: none; } }
+  @keyframes a_fill { 0% { opacity: .5; transform: none; } 45% { opacity: 1; transform: scale(1.12) rotate(3deg); } 100% { opacity: 1; transform: rotate(1deg); background: var(--blue); color: var(--white); border-style: solid; box-shadow: 8px 8px 0 var(--black); } }
+  @keyframes a_slam { from { opacity: 0; transform: scale(1.5) rotate(4deg); } to { opacity: 1; transform: rotate(1deg); } }
+  .act .arrow { align-self: center; font-size: 40px; font-weight: 800; line-height: 1; color: var(--blue); opacity: 0; } .slide.active .act .arrow { animation: a_arr .5s ease 1s forwards, p_bob 1s ease-in-out 4.1s 3; } @keyframes a_arr { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+  .hg { position: absolute; left: -54px; top: 10px; font-size: 40px; opacity: 0; }
+  .slide.active .hg { animation: p_fade .3s ease .9s forwards, a_flip 1.2s ease-in-out 1s 3, a_out .2s ease 3.9s forwards; }
+  @keyframes a_flip { 50% { transform: rotate(180deg); } 100% { transform: rotate(180deg); } } @keyframes a_out { to { opacity: 0; } }
+  .ph { position: relative; flex: none; width: 288px; height: 458px; }
+  .ph > svg { position: absolute; inset: 0; }
+  .slide.active .ph { animation: a_wait 2.6s ease-in-out .6s, a_shake .5s ease 3.2s, a_pop .5s cubic-bezier(.3,1.6,.5,1) 3.9s; }
+  @keyframes a_wait { 50% { transform: scale(.97); } } @keyframes a_shake { 20% { transform: translateX(-8px) rotate(-2deg); } 40% { transform: translateX(8px) rotate(2deg); } 60% { transform: translateX(-5px); } 80% { transform: translateX(4px); } }
+  @keyframes a_pop { 40% { transform: scale(1.08); } 100% { transform: none; } }
+  .scr { position: absolute; left: 22px; right: 22px; top: 60px; bottom: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; }
+  .ring { width: 130px; height: 130px; }
+  .ring .trk { stroke: var(--gray); } .ring .bar { stroke: var(--blue); stroke-dasharray: 340; stroke-dashoffset: 340; transform: rotate(-90deg); transform-origin: 65px 65px; }
+  .slide.active .ring .bar { animation: a_ring1 2.4s cubic-bezier(.4,0,.2,1) .8s forwards, a_ring2 .4s ease-in 3.5s forwards; }
+  @keyframes a_ring1 { to { stroke-dashoffset: 40; } } @keyframes a_ring2 { to { stroke-dashoffset: 0; } }
+  .dots3 { display: flex; gap: 10px; } .dots3 i { width: 14px; height: 14px; border-radius: 50%; background: var(--black); }
+  .slide.active .dots3 i { animation: a_dot .5s ease-in-out infinite alternate; } .dots3 i:nth-child(2) { animation-delay: .15s !important; } .dots3 i:nth-child(3) { animation-delay: .3s !important; }
+  @keyframes a_dot { to { transform: translateY(-10px); } }
+  .typed { font-weight: 800; font-size: 25px; line-height: 1.2; white-space: nowrap; clip-path: inset(0 100% 0 0); }
+  .slide.active .typed { animation: a_type 1.4s steps(17) 1.2s forwards; } @keyframes a_type { to { clip-path: inset(0 0 0 0); } }
+  .load { transition: none; } .slide.active .load { animation: a_out .25s ease 3.85s forwards; }
+  .done { opacity: 0; } .slide.active .done { animation: p_fade .2s ease 3.95s forwards; }
+  .chk { width: 120px; height: 120px; } .chk circle { fill: var(--blue); transform-origin: 60px 60px; transform: scale(0); } .slide.active .chk circle { animation: a_circ .45s cubic-bezier(.3,1.6,.5,1) 3.95s forwards; } @keyframes a_circ { to { transform: scale(1); } }
+  .chk path { stroke-dasharray: 120; stroke-dashoffset: 120; } .slide.active .chk path { animation: p_draw .45s ease 4.3s forwards; }
+  .done p { font-weight: 800; font-size: 25px; line-height: 1.2; }
+  .flash { position: absolute; left: -200px; right: -200px; top: -200px; bottom: -200px; border-radius: 50%; background: radial-gradient(circle, #FFFFFF 0%, rgba(255,255,255,0) 60%); opacity: 0; pointer-events: none; }
+  .slide.active .flash { animation: a_flash .7s ease 3.85s; } @keyframes a_flash { 25% { opacity: 1; } 100% { opacity: 0; } }
+  .cf { position: absolute; left: 50%; top: 45%; opacity: 0; }
+  .slide.active .cf { animation: a_conf 1.5s cubic-bezier(.2,.8,.4,1) 3.95s forwards; }
+  @keyframes a_conf { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) + 120px)) rotate(var(--rt)); } }
+  .opened .cf, .slide.opened .cf { }
+  /* ================= CONTENT SLIDES ================= */
+  .tag { align-self: flex-start; display: inline-flex; gap: 8px; align-items: center; border: 3px solid var(--black); border-radius: 999px; padding: 2px 16px; font-weight: 800; background: var(--white); }
+  .tag.s { background: var(--blue); color: var(--white); }
+  .grid2 { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: center; margin-right: 104px; }
+  .grid2 .tx { display: flex; flex-direction: column; gap: 12px; }
+  .grid2 p { line-height: 1.36; }
+  /* no feedback vs feedback */
+  .nf { display: flex; gap: 24px; justify-content: center; }
+  .nf > div { display: flex; flex-direction: column; align-items: center; gap: 6px; font-weight: 800; text-align: center; line-height: 1.15; }
+  .nf .wrap { position: relative; }
+  .nf .tapf { position: absolute; left: 60px; top: 150px; font-size: 34px; }
+  .slide.active .nf .bad .tapf { animation: n_tap .35s ease-in-out 1s 6; } @keyframes n_tap { 50% { transform: translate(-6px, -12px) scale(.9); } }
+  .slide.active .nf .bad .wrap svg { animation: a_shake .4s ease 3.1s; }
+  .nf .q { position: absolute; font-family: 'DM Serif Text', serif; font-size: 36px; opacity: 0; } .slide.active .nf .q { animation: p_pop .3s ease forwards; }
+  .nf .q1 { left: -8px; top: 10px; animation-delay: 1.8s !important; } .nf .q2 { right: -6px; top: 40px; animation-delay: 2.3s !important; } .nf .q3 { left: 30px; top: -24px; animation-delay: 2.8s !important; }
+  .nf .good .spin { position: absolute; left: 50%; top: 92px; margin-left: -24px; width: 48px; height: 48px; border-radius: 50%; border: 6px solid var(--gray); border-top-color: var(--blue); opacity: 0; }
+  .slide.active .nf .good .spin { animation: p_fade .2s ease 1.3s forwards, n_spin .8s linear 1.3s infinite; } @keyframes n_spin { to { transform: rotate(360deg); } }
+  .nf .bad span.l { color: #555; } .nf .good span.l { color: var(--blue); }
+  /* Loading… → Finding your Duo… */
+  .morph { display: flex; gap: 22px; align-items: baseline; flex-wrap: wrap; margin-right: 104px; font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.1; }
+  .morph .old { position: relative; color: #777; } .morph .old::after { content: ''; position: absolute; left: -4px; right: -4px; top: 55%; height: 6px; background: var(--black); border-radius: 3px; transform: scaleX(0); transform-origin: left; }
+  .slide.active .morph .old::after { animation: m_x .4s ease 1s forwards; } @keyframes m_x { to { transform: scaleX(1); } }
+  .morph .new { color: var(--blue); white-space: nowrap; clip-path: inset(0 100% 0 0); } .slide.active .morph .new { animation: m_type 1.2s steps(17) 1.5s forwards; } @keyframes m_type { to { clip-path: inset(0 0 0 0); } }
+  .dial { position: relative; width: 300px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .dial svg { width: 260px; height: 140px; }
+  .dial .nd { transform-origin: 140px 140px; transform: rotate(-70deg); }
+  .slide.active .dial .nd { animation: d_sw 1.6s cubic-bezier(.3,1.5,.5,1) 2.6s forwards; } @keyframes d_sw { 40% { transform: rotate(85deg); } 100% { transform: rotate(62deg); } }
+  .dial .ends { display: flex; justify-content: space-between; gap: 14px; width: 300px; font-weight: 800; } .dial .ends span:last-child { color: var(--blue); }
+  .dial .em { font-weight: 800; text-align: center; line-height: 1.2; border: 3px solid var(--black); border-radius: 14px; padding: 4px 10px; background: var(--white); }
+  .qte { border-left: 8px solid var(--blue); padding: 2px 0 2px 14px; display: flex; flex-direction: column; gap: 2px; }
+  .qte .say { font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.2; }
+  /* stamps */
+  .stamps { position: relative; width: 300px; height: 300px; }
+  .stamps .st { position: absolute; left: 10px; width: 280px; border: 5px solid var(--blue); border-radius: 12px; padding: 6px 12px; font-weight: 800; color: var(--blue); background: var(--white); text-align: center; line-height: 1.15; opacity: 0; }
+  .stamps .st1 { top: 0; } .stamps .st2 { top: 92px; } .stamps .st3 { top: 184px; }
+  .slide.active .stamps .st { animation: s_thud .45s cubic-bezier(.5,0,.6,1) forwards; } .slide.active .stamps .st1 { animation-delay: 1s; --r: -4deg; } .slide.active .stamps .st2 { animation-delay: 1.6s; --r: 3deg; } .slide.active .stamps .st3 { animation-delay: 2.2s; --r: -2deg; }
+  @keyframes s_thud { 0% { opacity: 0; transform: scale(2.2) rotate(var(--r)); } 70% { opacity: 1; transform: scale(.94) rotate(var(--r)); } 100% { opacity: 1; transform: scale(1) rotate(var(--r)); } }
+  .slide.active .stamps { animation: a_shake .3s ease 1.45s, a_shake .3s ease 2.05s, a_shake .3s ease 2.65s; }
+  .stamps .back { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); font-weight: 800; white-space: nowrap; opacity: 0; } .slide.active .stamps .back { animation: p_up .5s ease 3s forwards; }
+  /* tap to post */
+  .post { display: grid; grid-template-columns: 240px 1fr; gap: 26px; align-items: center; margin-right: 104px; }
+  .pp { position: relative; width: 240px; height: 420px; }
+  .pp > svg { position: absolute; inset: 0; }
+  .pp .scr2 { position: absolute; left: 22px; right: 22px; top: 54px; bottom: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+  .pp .pics { display: flex; gap: 8px; } .pp .pics span { width: 82px; height: 110px; border: 3px solid var(--black); border-radius: 10px; background: var(--gray); display: flex; align-items: flex-end; justify-content: center; font-size: 34px; }
+  .pp .postbtn { font: inherit; font-weight: 800; border: 3px solid var(--black); border-radius: 999px; padding: 6px 30px; background: var(--blue); color: var(--white); cursor: pointer; box-shadow: 0 5px 0 var(--black); }
+  .slide:not(.opened) .pp .postbtn { animation: p_bob 1.2s ease-in-out 1s infinite; }
+  .pp .ok2 { position: absolute; inset: 54px 22px 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: var(--white); opacity: 0; pointer-events: none; font-size: 44px; }
+  .slide.opened .pp .ok2 { animation: p_fade .3s ease .3s forwards; }
+  .slide.opened .pp .ok2 .chk circle { animation: a_circ .45s cubic-bezier(.3,1.6,.5,1) .35s forwards; } .slide.opened .pp .ok2 .chk path { animation: p_draw .45s ease .7s forwards; }
+  .slide.opened .pp .cf { animation: a_conf 1.5s cubic-bezier(.2,.8,.4,1) .3s forwards; }
+  .slide.opened .pp { animation: a_pop .5s cubic-bezier(.3,1.6,.5,1) .25s; }
+  .post .after { opacity: 0; transform: translateY(12px); transition: opacity .5s ease 1s, transform .5s ease 1s; } .slide.opened .post .after { opacity: 1; transform: none; }
+  /* toasts */
+  .toasts { display: flex; gap: 20px; align-items: center; margin-right: 104px; }
+  .toast { border: 4px solid var(--black); border-radius: 16px; padding: 8px 18px; font-weight: 800; font-size: 28px; position: relative; }
+  .toast.bad { background: var(--gray); } .toast.bad::after { content: ''; position: absolute; left: 6px; right: 6px; top: 52%; height: 5px; background: var(--black); transform: scaleX(0); transform-origin: left; }
+  .slide.active .toast.bad::after { animation: m_x .4s ease 1.1s forwards; } .slide.active .toast.bad { animation: t_shrink .4s ease 1.5s forwards; } @keyframes t_shrink { to { opacity: .45; transform: scale(.9); } }
+  .toast.good { background: var(--blue); color: var(--white); box-shadow: 6px 6px 0 var(--black); opacity: 0; } .slide.active .toast.good { animation: a_slam .5s cubic-bezier(.3,1.6,.5,1) 1.7s forwards; }
+  .spk { font-size: 34px; opacity: 0; } .slide.active .spk { animation: p_pop .4s ease 2.1s forwards, p_bob 1.4s ease-in-out 2.5s infinite; }
+  .tipl { margin-right: 104px; display: flex; flex-direction: column; gap: 6px; }
+  .tipl div { border: 3px solid var(--black); border-radius: 12px; padding: 4px 12px; background: var(--white); line-height: 1.25; }
+  .emo { align-self: flex-start; border: 3px solid var(--black); border-radius: 999px; padding: 4px 18px; background: var(--blue-50); font-weight: 800; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+<section class="slide act active" aria-live="polite" data-hand="6200"><div class="stage"><div class="titles"><div class="tc t1" style="position:relative"><span class="hg">⏳</span><span class="k">Act 1 · 2️⃣</span><b>Loading State</b><i>The Waiting Moment</i></div><span class="arrow">↓</span><div class="tc t2"><span class="k">Act 2 · 3️⃣</span><b>Success State</b><i>The Feel-Good Moment</i></div></div><div class="ph"><div class="flash"></div><svg class="" viewBox="0 0 138 220" style="height:458px;width:auto"><rect x="4" y="4" width="130" height="212" rx="22" fill="#FFF" stroke="#000" stroke-width="5"/><rect x="53.0" y="13" width="32" height="7" rx="3.5" fill="#000"/></svg><div class="scr load"><svg class="ring" viewBox="0 0 130 130"><circle class="trk" cx="65" cy="65" r="54" fill="none" stroke-width="12"/><circle class="bar" cx="65" cy="65" r="54" fill="none" stroke-width="12" stroke-linecap="round"/></svg><div class="dots3"><i></i><i></i><i></i></div><span class="typed">Finding your Duo…</span></div><div class="scr done"><svg class="chk" viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" stroke="#000" stroke-width="5"/><path d="M34 62 l18 18 l36 -40" fill="none" stroke="#FFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg><p>You and Maya posted your BeReal! 🔆</p></div><i class="cf" style="--dx:169px;--dy:-52px;--rt:644deg;background:#000;width:14px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:153px;--dy:-9px;--rt:429deg;background:#2550D0;width:14px;height:18px;border-radius:50%"></i><i class="cf" style="--dx:207px;--dy:27px;--rt:531deg;background:#2550D0;width:14px;height:18px;border-radius:2px"></i><i class="cf" style="--dx:189px;--dy:79px;--rt:300deg;background:#DFE9FC;width:16px;height:8px;border-radius:50%"></i><i class="cf" style="--dx:151px;--dy:112px;--rt:335deg;background:#2550D0;width:16px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:74px;--dy:103px;--rt:501deg;background:#000;width:14px;height:18px;border-radius:50%"></i><i class="cf" style="--dx:23px;--dy:116px;--rt:647deg;background:#2550D0;width:10px;height:12px;border-radius:50%"></i><i class="cf" style="--dx:-4px;--dy:180px;--rt:246deg;background:#2550D0;width:14px;height:18px;border-radius:50%"></i><i class="cf" style="--dx:-83px;--dy:201px;--rt:471deg;background:#2550D0;width:14px;height:8px;border-radius:50%"></i><i class="cf" style="--dx:-105px;--dy:104px;--rt:543deg;background:#C2D5F9;width:10px;height:12px;border-radius:2px"></i><i class="cf" style="--dx:-175px;--dy:100px;--rt:403deg;background:#000;width:12px;height:18px;border-radius:2px"></i><i class="cf" style="--dx:-213px;--dy:27px;--rt:587deg;background:#2550D0;width:16px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:-153px;--dy:-8px;--rt:639deg;background:#2550D0;width:14px;height:8px;border-radius:50%"></i><i class="cf" style="--dx:-152px;--dy:-69px;--rt:465deg;background:#2550D0;width:14px;height:18px;border-radius:50%"></i><i class="cf" style="--dx:-161px;--dy:-84px;--rt:416deg;background:#C2D5F9;width:10px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:-155px;--dy:-105px;--rt:417deg;background:#C2D5F9;width:10px;height:12px;border-radius:2px"></i><i class="cf" style="--dx:-164px;--dy:-191px;--rt:449deg;background:#000;width:10px;height:8px;border-radius:50%"></i><i class="cf" style="--dx:-160px;--dy:-237px;--rt:558deg;background:#DFE9FC;width:14px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:-47px;--dy:-196px;--rt:647deg;background:#DFE9FC;width:16px;height:12px;border-radius:50%"></i><i class="cf" style="--dx:-20px;--dy:-270px;--rt:583deg;background:#2550D0;width:16px;height:18px;border-radius:50%"></i><i class="cf" style="--dx:-1px;--dy:-202px;--rt:243deg;background:#C2D5F9;width:10px;height:8px;border-radius:50%"></i><i class="cf" style="--dx:59px;--dy:-187px;--rt:346deg;background:#2550D0;width:14px;height:18px;border-radius:2px"></i><i class="cf" style="--dx:135px;--dy:-225px;--rt:284deg;background:#2550D0;width:12px;height:18px;border-radius:2px"></i><i class="cf" style="--dx:158px;--dy:-217px;--rt:552deg;background:#DFE9FC;width:10px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:222px;--dy:-153px;--rt:565deg;background:#C2D5F9;width:14px;height:12px;border-radius:50%"></i><i class="cf" style="--dx:213px;--dy:-110px;--rt:665deg;background:#2550D0;width:10px;height:12px;border-radius:50%"></i></div></div></section><section class="slide col" data-hand="4200"><span class="tag auto">2️⃣ Loading</span><div class="grid2"><div class="tx"><p class="auto d1"><b>What it is:</b> the short time when something is happening behind the scenes: data is being fetched, a photo is uploading, the feature is starting up.</p><p class="auto d2"><b>Why it matters:</b> even a 1-second delay feels long with no feedback. A loading state reassures users that <i>something is happening</i>.</p></div><div class="nf auto d2"><div class="bad"><div class="wrap"><svg class="" viewBox="0 0 120 220" style="height:200px;width:auto"><rect x="4" y="4" width="112" height="212" rx="22" fill="#FFF" stroke="#000" stroke-width="5"/><rect x="44.0" y="13" width="32" height="7" rx="3.5" fill="#000"/><rect x="30" y="140" width="60" height="22" rx="11" fill="#E4E4E4" stroke="#000" stroke-width="4"/></svg><span class="tapf">👆</span><span class="q q1">?</span><span class="q q2">?</span><span class="q q3">?</span></div><span class="l">no feedback</span></div><div class="good"><div class="wrap"><svg class="" viewBox="0 0 120 220" style="height:200px;width:auto"><rect x="4" y="4" width="112" height="212" rx="22" fill="#FFF" stroke="#000" stroke-width="5"/><rect x="44.0" y="13" width="32" height="7" rx="3.5" fill="#000"/><rect x="30" y="140" width="60" height="22" rx="11" fill="#2550D0" stroke="#000" stroke-width="4"/></svg><i class="spin"></i></div><span class="l">something is<br>happening</span></div></div></div></section><section class="slide col" data-hand="4600"><div class="morph"><span class="old">"Loading…"</span><span class="new">"Finding your Duo…"</span></div><div class="grid2"><div class="tx"><p class="auto d1"><b>Example:</b> when BeReal is fetching your camera or your partner's photo:</p><div class="qte auto d1"><span class="say">"Finding your Duo…"</span><i>(Add a small progress icon or spinner.)</i></div><p class="auto d2"><b>Design tip:</b> don't overdo it. Subtle movement or text is enough. Never say just "Loading…": make it specific to the moment.</p></div><div class="dial auto d3"><svg viewBox="0 0 280 150"><path d="M20 140 A120 120 0 0 1 260 140" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round"/><path d="M26 140 A114 114 0 0 1 80 46" fill="none" stroke="#E4E4E4" stroke-width="14"/><path d="M200 46 A114 114 0 0 1 254 140" fill="none" stroke="#C2D5F9" stroke-width="14"/><g class="nd"><path d="M140 140 V40" stroke="#2550D0" stroke-width="8" stroke-linecap="round"/></g><circle cx="140" cy="140" r="12" fill="#000"/></svg><div class="ends"><span>frustration</span><span>anticipation</span></div><span class="em">Emotion to aim for: anticipation, not frustration.</span></div></div></section><section class="slide col" data-hand="4000"><span class="tag s auto">3️⃣ Success</span><div class="grid2"><div class="tx"><p class="auto d1"><b>What it is:</b> confirmation that something worked: your post went live, your pairing was accepted, your reminder was sent.</p><p class="auto d2"><b>Why it matters:</b> this is your <b>moment of delight</b>. It tells users they did something, and it encourages them to do it again. It's also your chance to give them a <i>reason to come back</i>.</p></div><div class="stamps auto d1"><span class="st st1">your post went live</span><span class="st st2">your pairing was accepted</span><span class="st st3">your reminder was sent</span></div></div></section><section class="slide col" data-gate=".postbtn" data-hand="2000" data-after="2600"><div class="post"><div class="auto"><div class="pp"><div class="flash"></div><svg class="" viewBox="0 0 120 220" style="height:420px;width:auto"><rect x="4" y="4" width="112" height="212" rx="22" fill="#FFF" stroke="#000" stroke-width="5"/><rect x="44.0" y="13" width="32" height="7" rx="3.5" fill="#000"/></svg><div class="scr2"><div class="pics"><span>🙂</span><span>😄</span></div><button class="postbtn" type="button">Post</button></div><div class="ok2"><svg class="chk" viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" stroke="#000" stroke-width="5"/><path d="M34 62 l18 18 l36 -40" fill="none" stroke="#FFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg><span>🔆</span></div><i class="cf" style="--dx:169px;--dy:-52px;--rt:644deg;background:#000;width:14px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:153px;--dy:-9px;--rt:429deg;background:#2550D0;width:14px;height:18px;border-radius:50%"></i><i class="cf" style="--dx:207px;--dy:27px;--rt:531deg;background:#2550D0;width:14px;height:18px;border-radius:2px"></i><i class="cf" style="--dx:189px;--dy:79px;--rt:300deg;background:#DFE9FC;width:16px;height:8px;border-radius:50%"></i><i class="cf" style="--dx:151px;--dy:112px;--rt:335deg;background:#2550D0;width:16px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:74px;--dy:103px;--rt:501deg;background:#000;width:14px;height:18px;border-radius:50%"></i><i class="cf" style="--dx:23px;--dy:116px;--rt:647deg;background:#2550D0;width:10px;height:12px;border-radius:50%"></i><i class="cf" style="--dx:-4px;--dy:180px;--rt:246deg;background:#2550D0;width:14px;height:18px;border-radius:50%"></i><i class="cf" style="--dx:-83px;--dy:201px;--rt:471deg;background:#2550D0;width:14px;height:8px;border-radius:50%"></i><i class="cf" style="--dx:-105px;--dy:104px;--rt:543deg;background:#C2D5F9;width:10px;height:12px;border-radius:2px"></i><i class="cf" style="--dx:-175px;--dy:100px;--rt:403deg;background:#000;width:12px;height:18px;border-radius:2px"></i><i class="cf" style="--dx:-213px;--dy:27px;--rt:587deg;background:#2550D0;width:16px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:-153px;--dy:-8px;--rt:639deg;background:#2550D0;width:14px;height:8px;border-radius:50%"></i><i class="cf" style="--dx:-152px;--dy:-69px;--rt:465deg;background:#2550D0;width:14px;height:18px;border-radius:50%"></i><i class="cf" style="--dx:-161px;--dy:-84px;--rt:416deg;background:#C2D5F9;width:10px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:-155px;--dy:-105px;--rt:417deg;background:#C2D5F9;width:10px;height:12px;border-radius:2px"></i><i class="cf" style="--dx:-164px;--dy:-191px;--rt:449deg;background:#000;width:10px;height:8px;border-radius:50%"></i><i class="cf" style="--dx:-160px;--dy:-237px;--rt:558deg;background:#DFE9FC;width:14px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:-47px;--dy:-196px;--rt:647deg;background:#DFE9FC;width:16px;height:12px;border-radius:50%"></i><i class="cf" style="--dx:-20px;--dy:-270px;--rt:583deg;background:#2550D0;width:16px;height:18px;border-radius:50%"></i><i class="cf" style="--dx:-1px;--dy:-202px;--rt:243deg;background:#C2D5F9;width:10px;height:8px;border-radius:50%"></i><i class="cf" style="--dx:59px;--dy:-187px;--rt:346deg;background:#2550D0;width:14px;height:18px;border-radius:2px"></i><i class="cf" style="--dx:135px;--dy:-225px;--rt:284deg;background:#2550D0;width:12px;height:18px;border-radius:2px"></i><i class="cf" style="--dx:158px;--dy:-217px;--rt:552deg;background:#DFE9FC;width:10px;height:8px;border-radius:2px"></i><i class="cf" style="--dx:222px;--dy:-153px;--rt:565deg;background:#C2D5F9;width:14px;height:12px;border-radius:50%"></i><i class="cf" style="--dx:213px;--dy:-110px;--rt:665deg;background:#2550D0;width:10px;height:12px;border-radius:50%"></i></div></div><div style="display:flex;flex-direction:column;gap:14px"><p class="auto d1"><b>Example:</b> after posting a joint photo:</p><div class="qte after"><span class="say">"You and Maya posted your BeReal! 🔆"</span><span class="say">"See what your friends shared today."</span></div></div></div></section><section class="slide col" data-hand="3800"><div class="toasts auto"><span class="toast bad">"Submission successful"</span><span class="toast good">"Nice!"</span><span class="spk">✨</span></div><p class="auto d2"><b>Design tip:</b></p><div class="tipl auto d2"><div>Keep visuals light but celebratory.</div><div>Use BeReal's casual tone ("Nice!" instead of "Submission successful").</div><div>A tiny highlight color or confetti cue is plenty. No overload.</div></div><span class="emo auto d4">Emotion to aim for: satisfaction, connection, quiet joy.</span></section>
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg>
+</div>
+
+<script>
+  document.querySelectorAll('.tabset').forEach(ts => {
+    const tabs = [...ts.querySelectorAll('.tab3')], panes = [...ts.querySelectorAll('.pane3')];
+    tabs.forEach((t, i) => t.addEventListener('click', () => { tabs.forEach((x, k) => x.setAttribute('aria-selected', k === i ? 'true' : 'false')); panes.forEach((p, k) => p.classList.toggle('on', k === i)); }));
+  });
+  document.querySelectorAll('.copy').forEach(b => b.addEventListener('click', () => {
+    const t = document.getElementById(b.dataset.copy).textContent.trim().replace(/^"|"$/g, '');
+    const done = () => { b.setAttribute('aria-pressed', 'true'); b.textContent = '✓ Copied'; setTimeout(() => { b.setAttribute('aria-pressed', 'false'); b.textContent = '⧉ Copy prompt'; }, 1800); };
+    const fallback = () => { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); done(); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done, fallback); else fallback();
+  }));
+
+  window.W = Object.assign(window.W || {}, { onSlide: () => closePops() });
+  function closePops() {
+    document.querySelectorAll('.hbtn[data-pop]').forEach(b => { b.setAttribute('aria-expanded', 'false'); document.getElementById(b.dataset.pop).classList.remove('show'); });
+  }
+  document.querySelectorAll('.hbtn[data-pop]').forEach(b => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') === 'true';
+    closePops();
+    if (!open) { b.setAttribute('aria-expanded', 'true'); document.getElementById(b.dataset.pop).classList.add('show'); }
+  }));
+
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    placeHand();
+  }
+  const W = window.W || {};
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd'), back = document.getElementById('back'), hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  const gateOf = s => s.dataset.gate ? s.querySelector(s.dataset.gate) : null;
+  const locked = s => !!s.dataset.gate && !s.classList.contains('opened');
+  // until a gate is tapped the hand points at it; otherwise it points at the forward arrow
+  function placeHand() {
+    const s = slides[current], g = locked(s) ? gateOf(s) : null;
+    hand.classList.toggle('on-gate', !!g);
+    if (g) {
+      const c = canvas.getBoundingClientRect(), r = g.getBoundingClientRect(), k = c.width / canvas.offsetWidth;
+      hand.style.left = ((r.left + r.width * 0.65 - c.left) / k) + 'px';
+      hand.style.top = ((r.top + r.height * 0.55 - c.top) / k) + 'px';
+    } else { hand.style.left = ''; hand.style.top = ''; }
+  }
+  function showFwd(delay) {
+    const s = slides[current];
+    fwd.classList.toggle('hidden', current === slides.length - 1 || locked(s));
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1 || locked(s)) handTimer = setTimeout(() => { placeHand(); hand.style.opacity = 1; }, delay != null ? delay : +(s.dataset.hand || 2600));
+  }
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    // load a clip only on its slide, and unload it when leaving so it stops playing
+    document.querySelectorAll('iframe[data-src]').forEach(f => {
+      const on = f.closest('.slide') === slides[current];
+      if (on && !f.getAttribute('src')) f.src = f.dataset.src; else if (!on && f.getAttribute('src')) f.removeAttribute('src');
+    });
+    if (W.onSlide) W.onSlide(current, slides[current]);
+    showFwd();
+  }
+  slides.forEach(s => {
+    const g = gateOf(s); if (!g) return;
+    g.addEventListener('click', () => {
+      if (s.classList.contains('opened')) return;
+      s.classList.add('opened');
+      if (W.onOpen) W.onOpen(s);
+      showFwd(+(s.dataset.after || 1600));
+    });
+  });
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { slides.forEach(s => s.classList.remove('opened')); if (W.onRestart) W.onRestart(); go(0); });
+  window.addEventListener('resize', fit);
+  // preview helper: #N opens slide N; add "open" (e.g. #4open) to show a gated slide already opened
+  const start = parseInt(location.hash.slice(1), 10);
+  const target = start >= 1 && start <= slides.length ? start - 1 : 0;
+  if (location.hash.includes('open')) { slides[target].classList.add('opened'); if (W.onOpen) W.onOpen(slides[target]); }
+  go(target);
+  fit();
+</script>
+</body>
+</html>
