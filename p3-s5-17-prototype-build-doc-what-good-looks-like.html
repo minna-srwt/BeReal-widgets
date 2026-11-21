@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Prototype Build Doc: What Good Looks Like</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #DFE9FC; --blue-200: #C2D5F9; --blue: #2550D0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .page { position: absolute; inset: 0; padding: 66px 40px 24px; opacity: 0; pointer-events: none; transition: opacity .4s ease; overflow: hidden; display: flex; flex-direction: column; gap: 12px; }
+  .page.active { opacity: 1; pointer-events: auto; }
+  .page.active .auto { opacity: 1; transform: none; }
+  .menu-btn { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px 0 12px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 16px; font-weight: 700; transition: opacity .3s; }
+  .menu-btn:hover { background: var(--gray); }
+  .jump { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 16px; font-weight: 800; box-shadow: 0 3px 0 var(--black); white-space: nowrap; transition: opacity .3s; }
+  .jump:hover { background: var(--black); color: var(--white); }
+  .p-menu { justify-content: center; gap: 20px; padding-bottom: 30px; }
+  .p-menu h2 { font-size: 52px; line-height: 1; }
+  .picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .pick { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; text-align: left; padding: 18px; border-radius: 22px; border: 3px solid var(--black); background: var(--white); cursor: pointer; font: inherit; color: inherit; min-height: 190px; box-shadow: 7px 7px 0 var(--gray); transition: transform .15s, box-shadow .15s; }
+  .pick:hover { transform: translate(-2px,-2px); box-shadow: 9px 9px 0 var(--black); }
+  .pick.good { background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); }
+  .pick .ico { width: 58px; height: 58px; border-radius: 16px; border: 2.5px solid var(--black); background: var(--white); display: flex; align-items: center; justify-content: center; font-size: 30px; }
+  .pick .name { font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.05; }
+  .pick .seen { position: absolute; top: -14px; right: -14px; width: 42px; height: 42px; border-radius: 50%; background: var(--blue); color: var(--white); border: 3px solid var(--black); display: flex; align-items: center; justify-content: center; font-size: 25px; font-weight: 800; transform: scale(0); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+  .pick.visited .seen { transform: scale(1); }
+  .pick .hand { right: 8px; bottom: -14px; }
+  .page.active .pick.next .hand { opacity: 1; transition: opacity .4s ease 1.2s; }
+  .note { font-size: 25px; line-height: 1.4; padding: 10px 14px; border-radius: 12px; background: var(--blue-50); border: 2px solid var(--blue-200); }
+  .phead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .phead h2 { font-size: 32px; line-height: 1.05; margin-right: 4px; }
+  .score { display: inline-flex; padding: 3px 11px; border-radius: 999px; border: 2.5px solid var(--black); font-size: 25px; font-weight: 800; background: var(--white); }
+  .good .score { background: var(--blue-50); }
+  .stabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .stab { font: inherit; font-size: 16px; font-weight: 700; padding: 6px 13px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; }
+  .stab[aria-selected="true"] { background: var(--black); color: var(--white); }
+  .stab.seen:not([aria-selected="true"]) { background: var(--blue-50); }
+  .stabs .sub { font-size: 25px; font-weight: 800; color: var(--blue); margin-left: 4px; }
+  .parts { position: relative; flex: 1; min-height: 0; }
+  .part { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .part.on { opacity: 1; pointer-events: auto; }
+  .part .lbl { font-size: 25px; font-weight: 800; color: var(--blue); }
+  .crit-q { border: 3px solid var(--black); border-radius: 16px; padding: 10px 16px; box-shadow: 6px 6px 0 var(--blue-200); }
+  .crit-q .k { font-size: 25px; font-weight: 800; color: var(--blue); }
+  .crit-q p { font-family: 'DM Serif Text', serif; font-size: 28px; line-height: 1.2; margin-top: 2px; }
+  .levels { display: flex; flex-direction: column; gap: 8px; margin-right: 104px; }
+  .lvl { display: grid; grid-template-columns: 170px 1fr; border: 2.5px solid var(--black); border-radius: 14px; overflow: hidden; }
+  .lvl .lh { padding: 8px 12px; font-size: 25px; font-weight: 800; line-height: 1.15; border-right: 2px solid var(--black); display: flex; align-items: center; }
+  .lvl.l1 .lh { background: var(--blue-50); } .lvl.l2 .lh { background: var(--blue); color: var(--white); }
+  .lvl .lb { padding: 8px 14px; font-size: 25px; line-height: 1.3; }
+  .ans { border: 3px solid var(--black); border-radius: 16px; overflow: hidden; background: var(--white); margin-right: 104px; }
+  .ans .qn { display: block; padding: 8px 14px; background: var(--blue-50); border-bottom: 2px solid var(--black); font-size: 25px; font-weight: 700; line-height: 1.25; }
+  .ans .a { display: block; padding: 10px 14px; font-size: 25px; line-height: 1.36; }
+  .bad .ans .a { font-style: italic; }
+  .ann { border-radius: 14px; padding: 10px 14px; font-size: 25px; line-height: 1.36; border: 2.5px solid var(--black); background: var(--white); margin-right: 104px; }
+  .ann b.crit { display: inline-block; padding: 0 10px; border-radius: 999px; margin-right: 6px; border: 2px solid var(--black); background: var(--blue); color: var(--white); }
+  .bad .ann b.crit { background: var(--gray); color: var(--black); }
+  .oneline { font-size: 25px; line-height: 1.4; padding: 10px 14px; border-left: 6px solid var(--blue); background: var(--blue-50); margin-right: 104px; }
+
+  .page { font-size: 25px; }
+  .lvl { grid-template-columns: 124px 1fr; } .levels { gap: 4px; } .lvl .lh { padding: 4px 8px; line-height: 1.15; } .lvl .lb { padding: 4px 10px; line-height: 1.2; } .crit-q { padding: 6px 14px; } .crit-q p { line-height: 1.25; }
+  .rw { border: 3px solid var(--black); border-radius: 14px; padding: 8px 14px; margin-right: 104px; display: flex; flex-direction: column; gap: 2px; background: var(--white); }
+  .rw b { font-size: 25px; font-weight: 800; color: var(--blue); line-height: 1.2; } .rw span { font-size: 25px; line-height: 1.3; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style></head>
+<body><div class="canvas" id="canvas"><div class="topbar">
+<button class="menu-btn hidden" id="toMenu" type="button" aria-label="Back to the menu"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Menu</button>
+<div class="topright"><button class="jump hidden" id="jump" type="button"></button><button class="restart" id="restart" type="button">↺ Start over</button></div></div>
+
+  <section class="page p-menu active" id="menu" aria-live="polite">
+    <h2 class="serif auto">What Good Looks Like</h2>
+    <div class="picks auto d1">
+      <button class="pick" type="button" data-go="rubric"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">📏</span><span class="name">The rubric</span></button>
+      <button class="pick good" type="button" data-go="good"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">✅</span><span class="name">Strong example</span></button>
+      <button class="pick" type="button" data-go="bad"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">❌</span><span class="name">Not-yet example</span></button>
+    </div>
+    <p class="note auto d2">📌 These examples are a Build Doc for <b>Spotify: Friday Fresh</b>, continuing the Step 2–4 examples. The prompt, checks and friend test are <b>made up</b> for illustration. Notice what the strong one does: <b>the AI did the building, the extern did the thinking</b>.</p>
+  </section>
+  <section class="page" id="rubric"><div class="phead"><h2 class="serif">📏 The rubric</h2></div><div class="stabs" role="tablist"></div><div class="parts"><div class="part" data-tab="Works"><div class="crit-q"><span class="k">It works, end to end · The test question</span><p>Can someone click from the first screen to "done" and back without getting stuck?</p></div><div class="levels"><div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">Not clickable, or fewer than 4 screens, or no states</span></div><div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Clickable, but one path is broken (often error or opt-out), or a state is missing</span></div><div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">4–6 screens + 2–3 states, every button goes where the flow map says (error and opt-out too), and a clear beginning and end</span></div></div></div><div class="part" data-tab="Yours"><div class="crit-q"><span class="k">Yours, not generic · The test question</span><p>Did you outsource the prototyping without outsourcing the thinking?</p></div><div class="levels"><div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">A one-line prompt, no any-app test, or AI filler left in</span></div><div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Prompt built from the blueprint, but the any-app test has no change, or some copy isn't yours</span></div><div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">A prompt with every screen and destination, an any-app test with a named change, and every line of copy your own</span></div></div></div><div class="part" data-tab="Coming back"><div class="crit-q"><span class="k">A case for coming back · The test question</span><p>Would people come back, and can you explain why?</p></div><div class="levels"><div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">No hooks, or hooks that pressure ("lose your streak!"), or no paragraph</span></div><div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">2–3 gentle hooks, but the paragraph doesn't explain them, or there's no friend test</span></div><div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">2–3 hooks that invite, a 5–7 sentence paragraph that explains how they grow MAUs, and something the friend actually did</span></div></div></div></div></section>
+  <section class="page good" id="good"><div class="phead"><h2 class="serif">✅ Strong example</h2><span class="score">2 · 2 · 2</span></div><div class="stabs" role="tablist"></div><div class="parts"><div class="part" data-tab="Works"><span class="lbl">Click-Through Check</span><div class="rw"><b>9 buttons checked</b><span>All ✓ after one fix: "On the Error screen, 'Retry' should go to screen 2, not screen 1."</span></div><div class="rw"><b>Screens and states</b><span>Intro → Friday mix → reaction → nudge → settings, plus Empty, Loading, Success and Error.</span></div></div><div class="part" data-tab="Yours"><span class="lbl">My Prompt (excerpt)</span><div class="rw"><b>Prompt</b><span>"…a clickable mobile wireframe for a new Spotify feature called Friday Fresh. Context: [the founding hypothesis]. Screens, in order: 1. Intro banner: shows 'Friday Fresh is here: 3 new songs in your mix every Friday.' Button 'Try it' goes to screen 2…"</span></div></div><div class="part" data-tab="Yours"><span class="lbl">The Any-App Test</span><div class="rw"><b>With "Spotify" covered, it looked like…</b><span>any music app's "New Releases" page.</span></div><div class="rw"><b>Only Spotify would do</b><span>the new songs come from your own listening history, inside your Daily Mix.</span></div><div class="rw"><b>What I changed</b><span>removed the separate "New Releases" screen and put the 3 songs inside the Daily Mix, labeled "New this Friday".</span></div></div><div class="part" data-tab="Coming back"><span class="lbl">MAU Hooks</span><div class="rw"><b>Reminder bubble · Friday mix</b><span>"Your Friday Fresh is ready 👀"</span></div><div class="rw"><b>Soft streak · reaction prompt</b><span>"3 Fridays in a row 🎧"</span></div><div class="rw"><b>Return cue · end of mix</b><span>"See you next Friday."</span></div></div><div class="part" data-tab="Coming back"><span class="lbl">Friend Test</span><div class="rw"><b>Where they hesitated</b><span>the 👍/👎 prompt: "Is this rating the song or the whole mix?"</span></div><div class="rw"><b>Reached success without asking?</b><span>Yes</span></div></div><div class="part" data-tab="Coming back"><span class="lbl">My Paragraph (excerpt)</span><div class="rw"><b>5–7 sentences</b><span>Friday Fresh gives Daily Mix listeners a reason to open Spotify on Fridays, the day the mix usually feels stale… When my friend tried it, she paused at the 👍/👎 prompt because she wasn't sure what she was rating, so I'd relabel it "More songs like this?"</span></div></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">It works, end to end: 2</b> Five screens and four states, every path checked (including Retry), and a clear start and end.</div><div class="ann"><b class="crit">Yours, not generic: 2</b> The prompt lists every screen and destination, and the any-app test led to a real change.</div></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">A case for coming back: 2</b> Three gentle hooks, a paragraph that explains how each one brings people back, and a specific friend observation.</div><p class="oneline"><b>Why it works:</b> built from the extern's own blueprint, and tested on a real person.</p></div></div></section>
+  <section class="page bad" id="bad"><div class="phead"><h2 class="serif">❌ Not-yet example</h2><span class="score">1 · 0 · 0</span></div><div class="stabs" role="tablist"></div><div class="parts"><div class="part" data-tab="Works"><span class="lbl">Click-Through Check</span><div class="rw"><b>Intro → Mix</b><span>✓</span></div><div class="rw"><b>Mix → Success</b><span>✓</span></div><div class="rw"><b>Error → Retry</b><span>goes nowhere (not fixed)</span></div></div><div class="part" data-tab="Yours"><span class="lbl">My Prompt · Any-App Test</span><div class="rw"><b>Prompt</b><span>"Make me a Spotify feature for new songs on Fridays."</span></div><div class="rw"><b>The Any-App Test</b><span>(blank)</span></div><div class="rw"><b>On the screens</b><span>"Welcome to the feature!" and "Unlock new experiences!" (added by the AI)</span></div></div><div class="part" data-tab="Coming back"><span class="lbl">Hooks · Friend Test · Paragraph</span><div class="rw"><b>Streak · Success</b><span>"Keep your streak alive or lose it! 🔥"</span></div><div class="rw"><b>Friend Test</b><span>(blank)</span></div><div class="rw"><b>My Paragraph</b><span>This feature will increase MAUs. Users will love it.</span></div></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">It works, end to end: 1</b> Clickable, but the Retry button goes nowhere.</div><div class="ann"><b class="crit">Yours, not generic: 0</b> A one-line prompt, no any-app test, and AI filler left in.</div></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">A case for coming back: 0</b> One hook, and it pressures. No friend test, and the paragraph explains nothing.</div><p class="oneline"><b>The difference in one line:</b> the strong prototype was built from the extern's own blueprint and tested on a real person; the not-yet one is what the AI makes when nobody does the thinking.</p></div></div></section>
+
+<button class="fwd hidden" id="fwd" type="button" aria-label="Next part"><svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+</div><script>
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+  const pages = [...document.querySelectorAll('.page')];
+  const picks = [...document.querySelectorAll('.pick')];
+  const toMenu = document.getElementById('toMenu'), jump = document.getElementById('jump'), fwd = document.getElementById('fwd');
+  const visited = new Set();
+  const JUMPS = { rubric: ['good', 'See the strong example →'], good: ['bad', 'See the not-yet example →'], bad: ['good', '← See the strong example'] };
+  // each page is a series of parts; parts that share a label share one tab and are stepped with the arrow
+  const series = {};
+  ['rubric', 'good', 'bad'].forEach(id => {
+    const page = document.getElementById(id);
+    const parts = [...page.querySelectorAll('.part')];
+    const tabs = page.querySelector('.stabs');
+    const labels = [...new Set(parts.map(p => p.dataset.tab))];
+    tabs.innerHTML = labels.map(l => `<button class="stab" type="button" role="tab" data-l="${l}">${l}</button>`).join('') + '<span class="sub" aria-live="polite"></span>';
+    const btns = [...tabs.querySelectorAll('.stab')];
+    series[id] = { parts, btns, sub: tabs.querySelector('.sub'), i: 0 };
+    btns.forEach(b => b.addEventListener('click', () => showPart(id, parts.findIndex(p => p.dataset.tab === b.dataset.l))));
+  });
+  function showPart(id, i) {
+    const s = series[id];
+    s.i = i;
+    s.parts.forEach((p, k) => p.classList.toggle('on', k === i));
+    const label = s.parts[i].dataset.tab, group = s.parts.filter(p => p.dataset.tab === label);
+    s.btns.forEach(b => { const on = b.dataset.l === label; b.setAttribute('aria-selected', on ? 'true' : 'false'); if (on) b.classList.add('seen'); });
+    s.sub.textContent = group.length > 1 ? `${group.indexOf(s.parts[i]) + 1} of ${group.length}` : '';
+    fwd.classList.toggle('hidden', i === s.parts.length - 1);
+  }
+  function markNext() {
+    const next = picks.find(p => !visited.has(p.dataset.go));
+    picks.forEach(p => p.classList.toggle('next', p === next));
+  }
+  let currentId = 'menu';
+  function show(id) {
+    currentId = id;
+    pages.forEach(p => p.classList.toggle('active', p.id === id));
+    toMenu.classList.toggle('hidden', id === 'menu');
+    jump.classList.toggle('hidden', !JUMPS[id]);
+    if (JUMPS[id]) { jump.dataset.go = JUMPS[id][0]; jump.textContent = JUMPS[id][1]; }
+    if (series[id]) showPart(id, 0); else fwd.classList.add('hidden');
+    if (id !== 'menu') { visited.add(id); picks.forEach(p => p.classList.toggle('visited', visited.has(p.dataset.go))); }
+    markNext();
+  }
+  picks.forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+  jump.addEventListener('click', () => show(jump.dataset.go));
+  toMenu.addEventListener('click', () => show('menu'));
+  fwd.addEventListener('click', () => { const s = series[currentId]; if (s && s.i < s.parts.length - 1) showPart(currentId, s.i + 1); });
+  document.getElementById('restart').addEventListener('click', () => {
+    visited.clear(); picks.forEach(p => p.classList.remove('visited'));
+    Object.values(series).forEach(s => s.btns.forEach(b => b.classList.remove('seen')));
+    show('menu');
+  });
+  window.addEventListener('resize', fit);
+  // preview helper: #rubric, #good, #bad; add -N to open part N (e.g. #good-3)
+  const m = location.hash.slice(1).match(/^(rubric|good|bad)(?:-(\d))?$/);
+  show(m ? m[1] : 'menu');
+  if (m && m[2] && series[m[1]]) showPart(m[1], parseInt(m[2], 10) - 1);
+</script></body></html>
