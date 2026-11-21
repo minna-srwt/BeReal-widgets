@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build Your Core Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #DFE9FC; --blue-200: #C2D5F9; --blue: #2550D0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .col { display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px; }
+  .sh { display: flex; align-items: center; gap: 14px; }
+  .sh .n { flex: none; min-width: 56px; height: 56px; padding: 0 8px; border-radius: 14px; border: 3px solid var(--black); background: var(--white); box-shadow: 4px 4px 0 var(--blue-200); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 32px; }
+  .sh h3 { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 34px; line-height: 1.1; }
+  .spacer { flex: 1; }
+  .callout { border: 3px solid var(--black); border-radius: 18px; padding: 14px 18px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); }
+  .vs { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); color: var(--white); font-family: 'DM Serif Text', serif; font-size: 25px; flex: none; }
+  .lab { font-size: 25px; font-weight: 700; line-height: 1.2; text-align: center; }
+  .pop-in { opacity: 0; transform: scale(.4); }
+  .slide.active .pop-in { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  @keyframes popin2 { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+
+  .help { position: relative; display: flex; gap: 12px; padding-right: 110px; }
+  .hbtn { font: inherit; font-size: 16px; font-weight: 700; padding: 9px 16px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; }
+  .hbtn[aria-expanded="true"] { background: var(--black); color: var(--white); }
+  .pop { position: absolute; left: 0; right: 110px; bottom: calc(100% + 10px); display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--white); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .25s, transform .25s; box-shadow: 0 8px 24px rgba(0,0,0,.15); z-index: 4; }
+  .pop.check { border: 3px solid var(--black); } .pop.stuck { border: 3px dashed var(--black); }
+  .pop.show { opacity: 1; transform: none; pointer-events: auto; }
+
+  .slide, .page { font-size: 25px; line-height: 1.42; }
+  .tplbtn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: var(--white); border: 2.5px solid var(--black); color: var(--black); font-size: 16px; font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--blue); white-space: nowrap; }
+  .tplbtn:hover { background: var(--black); color: var(--white); }
+  .tplbtn:hover svg path, .tplbtn:hover svg line { stroke: var(--white); }
+  .s1 { display: flex; flex-direction: column; justify-content: center; gap: 16px; padding-bottom: 30px; }
+  .art { display: flex; justify-content: center; align-items: center; margin-right: 104px; }
+  .art svg { max-height: 150px; width: auto; max-width: 100%; }
+  .check { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border: 3px solid var(--black); border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--blue-50); }
+  .where { align-self: flex-start; font-size: 25px; font-weight: 700; padding: 4px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--blue-50); color: var(--blue); }
+  .bul { display: flex; flex-direction: column; gap: 8px; margin-right: 104px; }
+  .bul li { list-style: none; position: relative; padding-left: 34px; line-height: 1.32; }
+  .bul li::before { content: ''; position: absolute; left: 6px; top: 12px; width: 13px; height: 13px; border-radius: 4px; background: var(--blue); border: 2px solid var(--black); }
+  .quote { border-left: 8px solid var(--blue); padding: 6px 0 6px 20px; margin-right: 104px; font-family: 'DM Serif Text', serif; font-size: 34px; line-height: 1.2; }
+  .attr { font-size: 25px; margin-right: 104px; }
+  .tabs3 { display: flex; flex-wrap: wrap; gap: 10px; margin-right: 104px; }
+  .tab3 { font: inherit; font-size: 25px; font-weight: 800; padding: 6px 16px; border-radius: 999px; border: 3px solid var(--black); background: var(--white); cursor: pointer; }
+  .tab3[aria-selected="true"] { background: var(--blue); color: var(--white); }
+  .pane3 { display: none; } .pane3.on { display: flex; }
+  .card3 { flex-direction: column; gap: 10px; border: 3px solid var(--black); border-radius: 18px; padding: 12px 16px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); margin-right: 104px; }
+  .fld b { display: block; font-size: 25px; font-weight: 800; color: var(--blue); line-height: 1.2; }
+  .fld span { line-height: 1.32; }
+  .bubble { border: 3px solid var(--black); border-radius: 18px 18px 18px 4px; padding: 12px 16px; background: var(--blue-50); font-style: italic; font-size: 25px; line-height: 1.4; margin-right: 104px; }
+  .copy[aria-pressed="true"] { background: var(--blue); color: var(--white); }
+  .copyrow { display: flex; gap: 12px; align-items: center; }
+  .tb { border-collapse: separate; border-spacing: 0; margin-right: 104px; width: calc(100% - 104px); }
+  .tb th, .tb td { border: 2.5px solid var(--black); padding: 8px 10px; font-size: 25px; line-height: 1.25; text-align: left; vertical-align: top; }
+  .tb th { background: var(--blue-50); } .tb th.new { background: var(--blue); color: var(--white); }
+  .ppl { display: flex; justify-content: center; gap: 22px; margin-right: 104px; }
+  .ppl svg { height: 150px; width: auto; }
+  .ppl .bub { opacity: 0; transform: scale(.3); transform-origin: 50% 80%; }
+  .slide.active .ppl .bub { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .slide.active .ppl .pp:nth-child(1) .bub { animation-delay: .5s; } .slide.active .ppl .pp:nth-child(2) .bub { animation-delay: .8s; } .slide.active .ppl .pp:nth-child(3) .bub { animation-delay: 1.1s; } .slide.active .ppl .pp:nth-child(4) .bub { animation-delay: 2.4s; }
+  .ai-line { font-size: 25px; line-height: 1.38; margin-right: 104px; }
+
+  .op { display: flex; gap: 22px; padding-bottom: 30px; }
+  .op.top { flex-direction: column; justify-content: center; }
+  .op.bottom { flex-direction: column-reverse; justify-content: center; }
+  .op.left { flex-direction: row-reverse; align-items: center; }
+  .op.right { flex-direction: row; align-items: center; }
+  .op.center { flex-direction: column; justify-content: center; align-items: center; }
+  .op .txt { display: flex; flex-direction: column; gap: 16px; }
+  .op.left .txt, .op.right .txt { flex: 1; min-width: 0; }
+  .op.top .txt, .op.bottom .txt { margin-right: 104px; }
+  .op .stmt { font-size: 44px; line-height: 1.14; }
+  .op .stmt.long { font-size: 38px; }
+  .scene { position: relative; flex: none; }
+  .op.top .scene, .op.bottom .scene { align-self: center; margin-right: 104px; }
+  .hookrest { margin-right: 0; }
+  .u { position: absolute; }
+  @keyframes p_pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: scale(1); } }
+  @keyframes p_up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+  @keyframes p_fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes p_draw { to { stroke-dashoffset: 0; } }
+  @keyframes p_bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes p_stamp { 0% { opacity: 0; transform: scale(2.4) rotate(-14deg); } 60% { opacity: 1; transform: scale(.9) rotate(-6deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }
+  @keyframes p_shake { 0%,100% { transform: translate(0,0) rotate(0); } 20% { transform: translate(-5px,2px) rotate(-3deg); } 40% { transform: translate(5px,-2px) rotate(3deg); } 60% { transform: translate(-4px,1px) rotate(-2deg); } 80% { transform: translate(3px,-1px) rotate(2deg); } }
+
+  .sh { flex-wrap: wrap; row-gap: 6px; } .sh .where { margin-left: 4px; } .sh .n.em { font-family: 'Inter', sans-serif; font-size: 26px; }
+  .cmp { gap: 8px; } .cmp .sh .n { min-width: 46px; height: 46px; } .cmp .sh h3 { font-size: 30px; }
+  .bl { display: flex; flex-direction: column; gap: 6px; margin-right: 104px; }
+  .bl div { border: 3px solid var(--black); border-radius: 12px; padding: 3px 12px; background: var(--white); line-height: 1.25; }
+  .bl div.k { background: var(--blue-50); box-shadow: 5px 5px 0 var(--blue); }
+  .bl div.no { background: var(--gray); }
+  .kq { margin-right: 104px; border-left: 8px solid var(--blue); padding: 4px 0 4px 16px; font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.22; }
+  .copybig { align-self: flex-start; display: inline-flex; gap: 10px; align-items: center; padding: 10px 20px; border: 3px solid var(--black); border-radius: 999px; background: var(--blue); color: var(--white); font-weight: 800; text-decoration: none; box-shadow: 0 5px 0 var(--black); }
+  .copybig:hover { background: var(--black); color: var(--white); }
+  .bubble.long { margin-right: 0; font-size: 25px; line-height: 1.3; }
+  .pr { display: flex; gap: 12px; align-items: flex-end; margin-right: 104px; } .pr .bubble { margin-right: 0; flex: 1; } .pr .copy { flex: none; }
+
+  .chat2 { position: relative; width: 600px; height: 210px; }
+  .chat2 .bb { left: 0; top: 60px; width: 230px; border: 3px solid var(--black); border-radius: 18px 18px 4px 18px; padding: 8px 12px; background: var(--blue-50); font-weight: 800; line-height: 1.2; }
+  .slide.active .chat2 .bb { animation: c_send .8s cubic-bezier(.5,0,.5,1) 1s forwards; } @keyframes c_send { 60% { transform: translateX(200px) scale(.6); opacity: 1; } 100% { transform: translateX(260px) scale(.2); opacity: 0; } }
+  .chat2 .ph { right: 60px; top: 0; } .chat2 .scr { opacity: 0; } .slide.active .chat2 .scr { animation: p_fade .3s ease forwards; }
+  .slide.active .chat2 .scr:nth-of-type(1) { animation-delay: 1.90s; } .slide.active .chat2 .scr:nth-of-type(2) { animation-delay: 2.25s; } .slide.active .chat2 .scr:nth-of-type(3) { animation-delay: 2.60s; } .slide.active .chat2 .scr:nth-of-type(4) { animation-delay: 2.95s; } 
+  .chat2 .sp { right: 230px; top: 90px; font-size: 40px; opacity: 0; } .slide.active .chat2 .sp { animation: p_pop .4s ease 1.8s forwards, c_out .3s ease 3.4s forwards; } @keyframes c_out { to { opacity: 0; } }
+  .scrs { display: flex; flex-direction: column; gap: 5px; margin-right: 104px; }
+  .scrs div { display: grid; grid-template-columns: 300px 1fr; gap: 10px; align-items: center; border: 3px solid var(--black); border-radius: 12px; padding: 1px 12px; background: var(--white); line-height: 1.2; }
+  .scrs i { font-family: 'DM Serif Text', serif; font-size: 28px; }
+  .has { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-right: 104px; }
+  .has div { border: 3px solid var(--black); border-radius: 12px; padding: 4px 12px; background: var(--white); line-height: 1.25; }
+
+  .ox { padding: 0 !important; }
+  .ox .stg { position: absolute; inset: 60px 0 0 0; padding: 12px 120px 22px 40px; display: flex; flex-direction: column; gap: 14px; justify-content: center; }
+  .ox .say { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.12; } .ox .say b { color: var(--blue); font-weight: 400; }
+  .ox .say.sm { font-size: 34px; }
+  @keyframes mk_on { to { opacity: 1; background: var(--blue); color: var(--white); border-color: var(--black); transform: scale(1.05); } }
+  @keyframes mk_txt { to { opacity: 1; } }
+  .mk-rib { display: flex; align-items: center; flex-wrap: wrap; row-gap: 6px; }
+  .mk-rib .it { border: 3px solid var(--black); border-radius: 999px; padding: 2px 14px; font-weight: 800; background: var(--white); opacity: .45; white-space: nowrap; }
+  .mk-rib .ln { width: 26px; height: 4px; background: var(--black); opacity: .45; }
+  .mk-trk { display: flex; flex-direction: column; gap: 10px; }
+  .mk-trk .it { display: grid; grid-template-columns: 46px 1fr; gap: 10px; align-items: center; font-weight: 800; line-height: 1.12; opacity: .45; }
+  .mk-trk .it b { width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--black); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 26px; background: var(--white); }
+  @keyframes trk_on { to { opacity: 1; } } @keyframes trk_b { to { background: var(--blue); color: var(--white); } }
+  .cfx { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; border-radius: 3px; opacity: 0; }
+  @keyframes cfx { 0% { opacity: 1; transform: translate(0,0) rotate(0); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(540deg); } }
+
+  .onex { display: flex; align-items: center; gap: 30px; justify-content: center; margin-right: 104px; }
+  .onex .pile { position: relative; display: grid; grid-template-columns: repeat(5, 30px); gap: 6px; }
+  .onex .pile i { width: 30px; height: 24px; border: 3px solid var(--black); border-radius: 8px 8px 8px 2px; background: var(--gray); }
+  .slide.active .onex .pile { animation: p_shake .3s linear 1.2s 4; }
+  .onex .xx { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 56px; opacity: 0; } .slide.active .onex .xx { animation: p_stamp .4s ease 2.6s forwards; }
+  .onex .vs { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 32px; }
+  .onex .one { position: relative; } .onex .one i { display: block; width: 90px; height: 60px; border: 4px solid var(--blue); border-radius: 18px 18px 18px 4px; background: var(--blue-50); }
+  .onex .okk { position: absolute; right: -18px; top: -18px; width: 44px; height: 44px; border-radius: 50%; background: var(--blue); color: var(--white); border: 3px solid var(--black); display: flex; align-items: center; justify-content: center; font-size: 26px; opacity: 0; }
+  .slide.active .onex .okk { animation: p_stamp .4s ease 3s forwards; }
+
+  .o05 .row { display: grid; grid-template-columns: 250px 1fr; gap: 20px; align-items: center; }
+  .o05 .flow { position: relative; display: flex; align-items: center; gap: 0; height: 200px; }
+  .o05 .sc { width: 64px; height: 118px; border: 4px solid var(--black); border-radius: 14px; background: var(--white); display: flex; align-items: center; justify-content: center; font-size: 30px; opacity: 0; transform: translateY(40px); }
+  .slide.active.o05 .sc { animation: o5_up .4s cubic-bezier(.3,1.5,.5,1) forwards; }
+  .slide.active.o05 .c0 { animation-delay: 1s; } .slide.active.o05 .c1 { animation-delay: 1.4s; } .slide.active.o05 .c2 { animation-delay: 1.8s; } .slide.active.o05 .c3 { animation-delay: 2.2s; } .slide.active.o05 .c4 { animation-delay: 2.6s; }
+  @keyframes o5_up { to { opacity: 1; transform: none; } }
+  .o05 .ar { display: block; width: 20px; height: 5px; background: var(--gray); }
+  .slide.active.o05 .ar { animation: o5_ar .3s ease forwards; } .slide.active.o05 .r0 { animation-delay: 3.8s; } .slide.active.o05 .r1 { animation-delay: 4.3s; } .slide.active.o05 .r2 { animation-delay: 4.8s; } .slide.active.o05 .r3 { animation-delay: 5.3s; }
+  @keyframes o5_ar { to { background: var(--blue); } }
+  .slide.active.o05 .sc.c3 { animation: o5_up .4s cubic-bezier(.3,1.5,.5,1) 2.2s forwards, o5_glow .6s ease 5.4s; } @keyframes o5_glow { 50% { box-shadow: 0 0 0 8px var(--blue-200); background: var(--blue-50); } }
+  .o05 .cur { position: absolute; left: 30px; top: 140px; font-size: 36px; opacity: 0; }
+  .slide.active.o05 .cur { animation: o5_cur 2.2s steps(4) 3.6s forwards; } @keyframes o5_cur { 0% { opacity: 1; transform: none; } 100% { opacity: 1; transform: translateX(336px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+<section class="slide ox o05 active" aria-live="polite" data-hand="6400"><div class="stg"><p class="say slam">Paste your prompt into <a href="https://claude.ai/" target="_blank" rel="noopener">Claude</a> or <a href="https://chatgpt.com/" target="_blank" rel="noopener">ChatGPT</a>.</p><div class="row"><div class="mk-trk"><div class="it" style="animation: trk_on .3s ease 0.8s forwards"><b style="animation: trk_b .3s ease 0.8s forwards">3</b><span>Build your core flow (one screen at a time)</span></div><div class="it" style="animation: trk_on .3s ease 3.4s forwards"><b style="animation: trk_b .3s ease 3.4s forwards">4</b><span>Add interactivity (clickable navigation)</span></div></div><div class="flow"><div class="sc c0"><span>👋</span></div><i class="ar r0"></i><div class="sc c1"><span>📸</span></div><i class="ar r1"></i><div class="sc c2"><span>⏳</span></div><i class="ar r2"></i><div class="sc c3"><span>✅</span></div><i class="ar r3"></i><div class="sc c4"><span>⚙️</span></div><span class="cur">👆</span></div></div></div></section><section class="slide col cmp"><div class="sh auto"><span class="n em">3️⃣</span><h3>Build your core flow (one screen at a time)</h3></div><p class="auto d1 pad">Then check the first version against your flow map, screen by screen:</p><div class="scrs auto d2"><div><span>1. <b>Onboarding/Intro</b></span><i>"Try Daily Duo" or "Pair up with a friend."</i></div><div><span>2. <b>Main Action</b></span><i>"Time to BeReal with Maya!"</i></div><div><span>3. <b>Loading / Waiting</b></span><i>"Finding your Duo…"</i></div><div><span>4. <b>Success</b></span><i>"You both posted! 🔆"</i></div><div><span>5. <b>Error / Opt-out</b></span><i>"Couldn't connect. Try again later."</i></div></div></section><section class="slide col cmp"><p class="auto pad">Each screen should have:</p><div class="has auto d1"><div>A short header</div><div>One key visual (a gray photo box, a phone frame, or an icon)</div><div>Microcopy (1–2 lines max)</div><div>One button or action</div></div><p class="auto d2 pad"><b>Style it like BeReal:</b></p><div class="has auto d3"><div>Light background</div><div>Minimal text</div><div>Rounded buttons, no clutter</div></div></section><section class="slide col cmp" data-hand="3200"><p class="stmt auto pad" style="font-size:36px"><b>Fix one thing per message.</b></p><p class="auto d1 pad">"Make the button on screen 2 say 'Invite Maya'" works much better than ten changes at once.</p><div class="onex auto d2"><div class="pile"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b class="xx">✗</b></div><b class="vs">vs.</b><div class="one"><i></i><b class="okk">✓</b></div></div><div class="check auto d3 pad"><span class="ic">🧠</span><span><b>Starting point, not the end-point.</b> If everyone outsources their thinking to AI, everyone ends up thinking about the same thing. Use it to test your own thinking.</span></div></section><section class="slide col cmp"><div class="sh auto"><span class="n">4️⃣</span><h3>Add interactivity (clickable navigation)</h3></div><p class="auto d1 pad">Click every button yourself. Each one should take you exactly where your flow map says. Example navigation:</p><div class="bl auto d2"><div>"Try It" → Pairing Screen</div><div>"Post" → Success Screen</div><div class="no">"Try Again" → Error → Pairing Screen</div></div><p class="auto d3 pad">If a button goes nowhere or to the wrong place, tell the AI exactly which one: <i>"On the Pairing screen, the 'Confirm' button should go to screen 3."</i></p><span class="where auto d2">In your doc: Click-Through Check</span><div class="spacer"></div><div class="help auto d3"><button class="hbtn" type="button" aria-expanded="false" data-pop="ok4">✅ Am I on track?</button><div class="pop check" id="ok4"><span class="ic">✅</span><span>You're on track if you can click from the first screen to "done" and back to the start without getting stuck.</span></div></div></section>
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg>
+</div>
+
+<script>
+  document.querySelectorAll('.tabset').forEach(ts => {
+    const tabs = [...ts.querySelectorAll('.tab3')], panes = [...ts.querySelectorAll('.pane3')];
+    tabs.forEach((t, i) => t.addEventListener('click', () => { tabs.forEach((x, k) => x.setAttribute('aria-selected', k === i ? 'true' : 'false')); panes.forEach((p, k) => p.classList.toggle('on', k === i)); }));
+  });
+  document.querySelectorAll('.copy').forEach(b => b.addEventListener('click', () => {
+    const t = document.getElementById(b.dataset.copy).textContent.trim().replace(/^"|"$/g, '');
+    const done = () => { b.setAttribute('aria-pressed', 'true'); b.textContent = '✓ Copied'; setTimeout(() => { b.setAttribute('aria-pressed', 'false'); b.textContent = '⧉ Copy prompt'; }, 1800); };
+    const fallback = () => { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); done(); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done, fallback); else fallback();
+  }));
+
+  window.W = Object.assign(window.W || {}, { onSlide: () => closePops() });
+  function closePops() {
+    document.querySelectorAll('.hbtn[data-pop]').forEach(b => { b.setAttribute('aria-expanded', 'false'); document.getElementById(b.dataset.pop).classList.remove('show'); });
+  }
+  document.querySelectorAll('.hbtn[data-pop]').forEach(b => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') === 'true';
+    closePops();
+    if (!open) { b.setAttribute('aria-expanded', 'true'); document.getElementById(b.dataset.pop).classList.add('show'); }
+  }));
+
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    placeHand();
+  }
+  const W = window.W || {};
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd'), back = document.getElementById('back'), hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  const gateOf = s => s.dataset.gate ? s.querySelector(s.dataset.gate) : null;
+  const locked = s => !!s.dataset.gate && !s.classList.contains('opened');
+  // until a gate is tapped the hand points at it; otherwise it points at the forward arrow
+  function placeHand() {
+    const s = slides[current], g = locked(s) ? gateOf(s) : null;
+    hand.classList.toggle('on-gate', !!g);
+    if (g) {
+      const c = canvas.getBoundingClientRect(), r = g.getBoundingClientRect(), k = c.width / canvas.offsetWidth;
+      hand.style.left = ((r.left + r.width * 0.65 - c.left) / k) + 'px';
+      hand.style.top = ((r.top + r.height * 0.55 - c.top) / k) + 'px';
+    } else { hand.style.left = ''; hand.style.top = ''; }
+  }
+  function showFwd(delay) {
+    const s = slides[current];
+    fwd.classList.toggle('hidden', current === slides.length - 1 || locked(s));
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1 || locked(s)) handTimer = setTimeout(() => { placeHand(); hand.style.opacity = 1; }, delay != null ? delay : +(s.dataset.hand || 2600));
+  }
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    // load a clip only on its slide, and unload it when leaving so it stops playing
+    document.querySelectorAll('iframe[data-src]').forEach(f => {
+      const on = f.closest('.slide') === slides[current];
+      if (on && !f.getAttribute('src')) f.src = f.dataset.src; else if (!on && f.getAttribute('src')) f.removeAttribute('src');
+    });
+    if (W.onSlide) W.onSlide(current, slides[current]);
+    showFwd();
+  }
+  slides.forEach(s => {
+    const g = gateOf(s); if (!g) return;
+    g.addEventListener('click', () => {
+      if (s.classList.contains('opened')) return;
+      s.classList.add('opened');
+      if (W.onOpen) W.onOpen(s);
+      showFwd(+(s.dataset.after || 1600));
+    });
+  });
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { slides.forEach(s => s.classList.remove('opened')); if (W.onRestart) W.onRestart(); go(0); });
+  window.addEventListener('resize', fit);
+  // preview helper: #N opens slide N; add "open" (e.g. #4open) to show a gated slide already opened
+  const start = parseInt(location.hash.slice(1), 10);
+  const target = start >= 1 && start <= slides.length ? start - 1 : 0;
+  if (location.hash.includes('open')) { slides[target].classList.add('opened'); if (W.onOpen) W.onOpen(slides[target]); }
+  go(target);
+  fit();
+</script>
+</body>
+</html>
