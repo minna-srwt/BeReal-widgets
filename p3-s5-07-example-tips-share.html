@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Example Screen Sequence, Pro Tips, Preview and Share</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #DFE9FC; --blue-200: #C2D5F9; --blue: #2550D0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .col { display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px; }
+  .sh { display: flex; align-items: center; gap: 14px; }
+  .sh .n { flex: none; min-width: 56px; height: 56px; padding: 0 8px; border-radius: 14px; border: 3px solid var(--black); background: var(--white); box-shadow: 4px 4px 0 var(--blue-200); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 32px; }
+  .sh h3 { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 34px; line-height: 1.1; }
+  .spacer { flex: 1; }
+  .callout { border: 3px solid var(--black); border-radius: 18px; padding: 14px 18px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); }
+  .vs { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); color: var(--white); font-family: 'DM Serif Text', serif; font-size: 25px; flex: none; }
+  .lab { font-size: 25px; font-weight: 700; line-height: 1.2; text-align: center; }
+  .pop-in { opacity: 0; transform: scale(.4); }
+  .slide.active .pop-in { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  @keyframes popin2 { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+
+  .help { position: relative; display: flex; gap: 12px; padding-right: 110px; }
+  .hbtn { font: inherit; font-size: 16px; font-weight: 700; padding: 9px 16px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; }
+  .hbtn[aria-expanded="true"] { background: var(--black); color: var(--white); }
+  .pop { position: absolute; left: 0; right: 110px; bottom: calc(100% + 10px); display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--white); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .25s, transform .25s; box-shadow: 0 8px 24px rgba(0,0,0,.15); z-index: 4; }
+  .pop.check { border: 3px solid var(--black); } .pop.stuck { border: 3px dashed var(--black); }
+  .pop.show { opacity: 1; transform: none; pointer-events: auto; }
+
+  .slide, .page { font-size: 25px; line-height: 1.42; }
+  .tplbtn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: var(--white); border: 2.5px solid var(--black); color: var(--black); font-size: 16px; font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--blue); white-space: nowrap; }
+  .tplbtn:hover { background: var(--black); color: var(--white); }
+  .tplbtn:hover svg path, .tplbtn:hover svg line { stroke: var(--white); }
+  .s1 { display: flex; flex-direction: column; justify-content: center; gap: 16px; padding-bottom: 30px; }
+  .art { display: flex; justify-content: center; align-items: center; margin-right: 104px; }
+  .art svg { max-height: 150px; width: auto; max-width: 100%; }
+  .check { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border: 3px solid var(--black); border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--blue-50); }
+  .where { align-self: flex-start; font-size: 25px; font-weight: 700; padding: 4px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--blue-50); color: var(--blue); }
+  .bul { display: flex; flex-direction: column; gap: 8px; margin-right: 104px; }
+  .bul li { list-style: none; position: relative; padding-left: 34px; line-height: 1.32; }
+  .bul li::before { content: ''; position: absolute; left: 6px; top: 12px; width: 13px; height: 13px; border-radius: 4px; background: var(--blue); border: 2px solid var(--black); }
+  .quote { border-left: 8px solid var(--blue); padding: 6px 0 6px 20px; margin-right: 104px; font-family: 'DM Serif Text', serif; font-size: 34px; line-height: 1.2; }
+  .attr { font-size: 25px; margin-right: 104px; }
+  .tabs3 { display: flex; flex-wrap: wrap; gap: 10px; margin-right: 104px; }
+  .tab3 { font: inherit; font-size: 25px; font-weight: 800; padding: 6px 16px; border-radius: 999px; border: 3px solid var(--black); background: var(--white); cursor: pointer; }
+  .tab3[aria-selected="true"] { background: var(--blue); color: var(--white); }
+  .pane3 { display: none; } .pane3.on { display: flex; }
+  .card3 { flex-direction: column; gap: 10px; border: 3px solid var(--black); border-radius: 18px; padding: 12px 16px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); margin-right: 104px; }
+  .fld b { display: block; font-size: 25px; font-weight: 800; color: var(--blue); line-height: 1.2; }
+  .fld span { line-height: 1.32; }
+  .bubble { border: 3px solid var(--black); border-radius: 18px 18px 18px 4px; padding: 12px 16px; background: var(--blue-50); font-style: italic; font-size: 25px; line-height: 1.4; margin-right: 104px; }
+  .copy[aria-pressed="true"] { background: var(--blue); color: var(--white); }
+  .copyrow { display: flex; gap: 12px; align-items: center; }
+  .tb { border-collapse: separate; border-spacing: 0; margin-right: 104px; width: calc(100% - 104px); }
+  .tb th, .tb td { border: 2.5px solid var(--black); padding: 8px 10px; font-size: 25px; line-height: 1.25; text-align: left; vertical-align: top; }
+  .tb th { background: var(--blue-50); } .tb th.new { background: var(--blue); color: var(--white); }
+  .ppl { display: flex; justify-content: center; gap: 22px; margin-right: 104px; }
+  .ppl svg { height: 150px; width: auto; }
+  .ppl .bub { opacity: 0; transform: scale(.3); transform-origin: 50% 80%; }
+  .slide.active .ppl .bub { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .slide.active .ppl .pp:nth-child(1) .bub { animation-delay: .5s; } .slide.active .ppl .pp:nth-child(2) .bub { animation-delay: .8s; } .slide.active .ppl .pp:nth-child(3) .bub { animation-delay: 1.1s; } .slide.active .ppl .pp:nth-child(4) .bub { animation-delay: 2.4s; }
+  .ai-line { font-size: 25px; line-height: 1.38; margin-right: 104px; }
+
+  .op { display: flex; gap: 22px; padding-bottom: 30px; }
+  .op.top { flex-direction: column; justify-content: center; }
+  .op.bottom { flex-direction: column-reverse; justify-content: center; }
+  .op.left { flex-direction: row-reverse; align-items: center; }
+  .op.right { flex-direction: row; align-items: center; }
+  .op.center { flex-direction: column; justify-content: center; align-items: center; }
+  .op .txt { display: flex; flex-direction: column; gap: 16px; }
+  .op.left .txt, .op.right .txt { flex: 1; min-width: 0; }
+  .op.top .txt, .op.bottom .txt { margin-right: 104px; }
+  .op .stmt { font-size: 44px; line-height: 1.14; }
+  .op .stmt.long { font-size: 38px; }
+  .scene { position: relative; flex: none; }
+  .op.top .scene, .op.bottom .scene { align-self: center; margin-right: 104px; }
+  .hookrest { margin-right: 0; }
+  .u { position: absolute; }
+  @keyframes p_pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: scale(1); } }
+  @keyframes p_up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+  @keyframes p_fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes p_draw { to { stroke-dashoffset: 0; } }
+  @keyframes p_bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes p_stamp { 0% { opacity: 0; transform: scale(2.4) rotate(-14deg); } 60% { opacity: 1; transform: scale(.9) rotate(-6deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }
+  @keyframes p_shake { 0%,100% { transform: translate(0,0) rotate(0); } 20% { transform: translate(-5px,2px) rotate(-3deg); } 40% { transform: translate(5px,-2px) rotate(3deg); } 60% { transform: translate(-4px,1px) rotate(-2deg); } 80% { transform: translate(3px,-1px) rotate(2deg); } }
+
+  .sh { flex-wrap: wrap; row-gap: 6px; } .sh .where { margin-left: 4px; } .sh .n.em { font-family: 'Inter', sans-serif; font-size: 26px; }
+  .cmp { gap: 8px; } .cmp .sh .n { min-width: 46px; height: 46px; } .cmp .sh h3 { font-size: 30px; }
+  .bl { display: flex; flex-direction: column; gap: 6px; margin-right: 104px; }
+  .bl div { border: 3px solid var(--black); border-radius: 12px; padding: 3px 12px; background: var(--white); line-height: 1.25; }
+  .bl div.k { background: var(--blue-50); box-shadow: 5px 5px 0 var(--blue); }
+  .bl div.no { background: var(--gray); }
+  .kq { margin-right: 104px; border-left: 8px solid var(--blue); padding: 4px 0 4px 16px; font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.22; }
+  .copybig { align-self: flex-start; display: inline-flex; gap: 10px; align-items: center; padding: 10px 20px; border: 3px solid var(--black); border-radius: 999px; background: var(--blue); color: var(--white); font-weight: 800; text-decoration: none; box-shadow: 0 5px 0 var(--black); }
+  .copybig:hover { background: var(--black); color: var(--white); }
+  .bubble.long { margin-right: 0; font-size: 25px; line-height: 1.3; }
+  .pr { display: flex; gap: 12px; align-items: flex-end; margin-right: 104px; } .pr .bubble { margin-right: 0; flex: 1; } .pr .copy { flex: none; }
+
+  .op.left .scene { width: 240px; height: 330px; }
+  .cyc { position: relative; width: 240px; height: 330px; display: flex; justify-content: center; }
+  .cyc .msg { position: absolute; left: 34px; right: 34px; top: 110px; text-align: center; font-weight: 800; line-height: 1.15; opacity: 0; }
+  .slide.active .cyc .msg { animation: y_show 1s ease forwards; } .slide.active .cyc .msg:nth-of-type(1) { animation-delay: 0.6s; } .slide.active .cyc .msg:nth-of-type(2) { animation-delay: 1.5s; } .slide.active .cyc .msg:nth-of-type(3) { animation-delay: 2.4s; } .slide.active .cyc .msg:nth-of-type(4) { animation-delay: 3.3s; } 
+  @keyframes y_show { 0% { opacity: 0; transform: translateX(30px); } 25%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(-30px); } }
+  .slide.active .cyc .msg:last-of-type { animation: y_end .5s ease 4.2s forwards; } @keyframes y_end { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: none; } }
+  .tips { display: flex; flex-direction: column; gap: 6px; margin-right: 104px; }
+  .tips div { border: 3px solid var(--black); border-radius: 12px; padding: 4px 12px; background: var(--white); line-height: 1.25; }
+
+  .ox { padding: 0 !important; }
+  .ox .stg { position: absolute; inset: 60px 0 0 0; padding: 12px 120px 22px 40px; display: flex; flex-direction: column; gap: 14px; justify-content: center; }
+  .ox .say { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.12; } .ox .say b { color: var(--blue); font-weight: 400; }
+  .ox .say.sm { font-size: 34px; }
+  @keyframes mk_on { to { opacity: 1; background: var(--blue); color: var(--white); border-color: var(--black); transform: scale(1.05); } }
+  @keyframes mk_txt { to { opacity: 1; } }
+  .mk-rib { display: flex; align-items: center; flex-wrap: wrap; row-gap: 6px; }
+  .mk-rib .it { border: 3px solid var(--black); border-radius: 999px; padding: 2px 14px; font-weight: 800; background: var(--white); opacity: .45; white-space: nowrap; }
+  .mk-rib .ln { width: 26px; height: 4px; background: var(--black); opacity: .45; }
+  .mk-trk { display: flex; flex-direction: column; gap: 10px; }
+  .mk-trk .it { display: grid; grid-template-columns: 46px 1fr; gap: 10px; align-items: center; font-weight: 800; line-height: 1.12; opacity: .45; }
+  .mk-trk .it b { width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--black); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 26px; background: var(--white); }
+  @keyframes trk_on { to { opacity: 1; } } @keyframes trk_b { to { background: var(--blue); color: var(--white); } }
+  .cfx { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; border-radius: 3px; opacity: 0; }
+  @keyframes cfx { 0% { opacity: 1; transform: translate(0,0) rotate(0); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(540deg); } }
+
+  .swr { display: flex; gap: 10px; align-items: center; margin-right: 104px; }
+  .swr span { width: 44px; height: 44px; border-radius: 10px; border: 3px solid var(--black); opacity: 0; } .slide.active .swr span { animation: p_pop .3s ease forwards; }
+  .swr .s1 { background: var(--white); animation-delay: 1.4s !important; } .swr .s2 { background: var(--gray); animation-delay: 1.6s !important; } .swr .s3 { background: #888; animation-delay: 1.8s !important; } .swr .s4 { background: var(--blue); animation-delay: 2s !important; }
+  .swr b { font-weight: 800; }
+  .shr { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-right: 104px; }
+  .shr span { border: 3px solid var(--black); border-radius: 12px; padding: 2px 12px; font-weight: 800; background: var(--white); }
+  .shr span.lk { background: var(--blue); color: var(--white); } .shr b { font-size: 28px; color: var(--blue); }
+  .slide.active .shr span.lk { animation: p_stamp .45s ease 2.4s both; }
+
+  .o07 .tabs { display: flex; gap: 6px; align-items: flex-end; }
+  .o07 .tb { border: 3px solid var(--black); border-bottom: 0; border-radius: 14px 14px 0 0; padding: 4px 14px; font-weight: 800; background: var(--gray); opacity: .5; }
+  .slide.active.o07 .tb { animation: o7_tab .4s ease forwards; } @keyframes o7_tab { to { opacity: 1; background: var(--white); transform: translateY(-4px); box-shadow: 0 -4px 0 var(--blue) inset; } }
+  .o07 .desk { position: relative; height: 340px; border: 3px solid var(--black); border-radius: 0 16px 16px 16px; background: var(--white); overflow: hidden; margin-top: -14px; }
+  .o07 .strip { position: absolute; left: 20px; top: 40px; display: flex; gap: 14px; }
+  .slide.active.o07 .strip { animation: o7_scroll 2.2s ease-in-out .8s forwards; } @keyframes o7_scroll { to { transform: translateX(-330px); } }
+  .o07 .fr { flex: none; width: 200px; height: 250px; border: 4px solid var(--black); border-radius: 22px; padding: 16px 12px; display: flex; flex-direction: column; gap: 8px; font-weight: 800; line-height: 1.15; background: var(--white); }
+  .o07 .fr b { width: 38px; height: 38px; border-radius: 50%; background: var(--blue); color: var(--white); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-weight: 400; }
+  .o07 .g { position: absolute; top: 30px; bottom: 30px; width: 0; border-left: 3px dashed var(--blue); opacity: 0; } .o07 .g1 { left: 26px; } .o07 .g2 { left: 220px; }
+  .slide.active.o07 .g { animation: p_fade .3s ease 3.2s forwards, o7_go .3s ease 4.6s forwards; } @keyframes o7_go { to { opacity: 0; } }
+  .o07 .sw { position: absolute; right: 20px; top: 20px; display: flex; gap: 6px; opacity: 0; } .o07 .sw i { width: 34px; height: 34px; border-radius: 8px; border: 3px solid var(--black); background: var(--gray); } .o07 .sw i:first-child { background: var(--white); } .o07 .sw i.b { background: var(--blue); }
+  .slide.active.o07 .sw { animation: p_pop .4s ease 3.6s forwards, o7_go .3s ease 4.6s forwards; }
+  .o07 .file { position: absolute; left: 40px; bottom: 30px; border: 3px solid var(--black); border-radius: 12px; padding: 4px 12px; font-weight: 800; background: var(--blue-50); opacity: 0; }
+  .slide.active.o07 .file { animation: o7_file 1.4s cubic-bezier(.5,0,.4,1) 4.8s forwards; } @keyframes o7_file { 0% { opacity: 1; } 100% { opacity: 1; transform: translate(260px, -10px); } }
+  .o07 .drv { position: absolute; right: 30px; bottom: 30px; border: 3px solid var(--black); border-radius: 999px; padding: 4px 14px; font-weight: 800; background: var(--blue); color: var(--white); opacity: 0; }
+  .slide.active.o07 .drv { animation: p_stamp .5s ease 6.2s forwards; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+<section class="slide ox o07 active" aria-live="polite" data-hand="7000"><div class="stg"><div class="tabs"><span class="tb" style="animation-delay:.6s">Example Screen Sequence</span><span class="tb" style="animation-delay:3s">Pro Tips</span><span class="tb" style="animation-delay:4.6s">Preview &amp; Share</span></div><div class="desk"><div class="strip"><div class="fr"><b>1</b><span>"Pair with a friend and post together daily."</span></div><div class="fr"><b>2</b><span>"Invite Maya → Finding your Duo…"</span></div><div class="fr"><b>3</b><span>"Time to BeReal with Maya!"</span></div><div class="fr"><b>4</b><span>"You both posted! 🔆"</span></div></div><i class="g g1"></i><i class="g g2"></i><div class="sw"><i></i><i></i><i></i><i class="b"></i></div><span class="file">📄 prototype.html</span><span class="drv">🔗 view-only link</span></div></div></section><section class="slide col"><p class="kick auto">Example Screen Sequence · tap each screen</p><div class="tabset auto d1"><div class="tabs3" role="tablist"><button class="tab3" type="button" role="tab" aria-selected="true">1 · Intro</button><button class="tab3" type="button" role="tab" aria-selected="false">2 · Pairing</button><button class="tab3" type="button" role="tab" aria-selected="false">3 · Prompt</button><button class="tab3" type="button" role="tab" aria-selected="false">4 · Success</button><button class="tab3" type="button" role="tab" aria-selected="false">5 · Error / Opt-Out</button></div><div style="height:12px"></div><div class="pane3 card3 on"><div class="fld"><b>Purpose</b><span>Intro</span></div><div class="fld"><b>Key Visuals</b><span>"Try Daily Duo" screen</span></div><div class="fld"><b>Sample Copy</b><span>"Pair with a friend and post together daily."</span></div></div><div class="pane3 card3"><div class="fld"><b>Purpose</b><span>Pairing</span></div><div class="fld"><b>Key Visuals</b><span>Friend-selection mockup</span></div><div class="fld"><b>Sample Copy</b><span>"Invite Maya → Finding your Duo…"</span></div></div><div class="pane3 card3"><div class="fld"><b>Purpose</b><span>Prompt</span></div><div class="fld"><b>Key Visuals</b><span>Joint BeReal camera view</span></div><div class="fld"><b>Sample Copy</b><span>"Time to BeReal with Maya!"</span></div></div><div class="pane3 card3"><div class="fld"><b>Purpose</b><span>Success</span></div><div class="fld"><b>Key Visuals</b><span>Split-screen confirmation</span></div><div class="fld"><b>Sample Copy</b><span>"You both posted! 🔆"</span></div></div><div class="pane3 card3"><div class="fld"><b>Purpose</b><span>Error / Opt-Out</span></div><div class="fld"><b>Key Visuals</b><span>Retry / exit option</span></div><div class="fld"><b>Sample Copy</b><span>"Something went wrong. Try again later."</span></div></div></div></section><section class="slide col"><div class="title-card auto">Pro Tips</div><div class="tips auto d1"><div>Keep <b>consistent spacing</b> on every screen. It makes your wireframe look professional.</div><div>Stick to <b>3–4 colors max</b>: neutrals with one highlight color.</div><div>Avoid shadows and gradients. BeReal's look is clean and direct.</div><div>Keep everything inside the phone frame. If the AI adds extra borders or backgrounds, ask it to remove them.</div></div><div class="swr auto d3"><span class="s1"></span><span class="s2"></span><span class="s3"></span><span class="s4"></span><b>3–4 colors max</b></div></section><section class="slide col"><div class="title-card auto">Preview &amp; Share</div><div class="tips auto d1"><div><b>Preview:</b> some AI tools show a live preview next to the chat. If yours does, click through it there. If not, copy all of the code, paste it into a plain-text file named <b>prototype.html</b>, and double-click it to open it in your web browser.</div><div><b>Share:</b> if your tool lets you publish or share a link to the preview, use that. Otherwise, upload your <b>prototype.html</b> file to Google Drive with view-only access, and take 3–5 screenshots of the key screens.</div></div><p class="auto d3 pad"><b>Now you have a clickable wireframe you can show to anyone, no coding required.</b></p></section>
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg>
+</div>
+
+<script>
+  document.querySelectorAll('.tabset').forEach(ts => {
+    const tabs = [...ts.querySelectorAll('.tab3')], panes = [...ts.querySelectorAll('.pane3')];
+    tabs.forEach((t, i) => t.addEventListener('click', () => { tabs.forEach((x, k) => x.setAttribute('aria-selected', k === i ? 'true' : 'false')); panes.forEach((p, k) => p.classList.toggle('on', k === i)); }));
+  });
+  document.querySelectorAll('.copy').forEach(b => b.addEventListener('click', () => {
+    const t = document.getElementById(b.dataset.copy).textContent.trim().replace(/^"|"$/g, '');
+    const done = () => { b.setAttribute('aria-pressed', 'true'); b.textContent = '✓ Copied'; setTimeout(() => { b.setAttribute('aria-pressed', 'false'); b.textContent = '⧉ Copy prompt'; }, 1800); };
+    const fallback = () => { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); done(); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done, fallback); else fallback();
+  }));
+
+  window.W = Object.assign(window.W || {}, { onSlide: () => closePops() });
+  function closePops() {
+    document.querySelectorAll('.hbtn[data-pop]').forEach(b => { b.setAttribute('aria-expanded', 'false'); document.getElementById(b.dataset.pop).classList.remove('show'); });
+  }
+  document.querySelectorAll('.hbtn[data-pop]').forEach(b => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') === 'true';
+    closePops();
+    if (!open) { b.setAttribute('aria-expanded', 'true'); document.getElementById(b.dataset.pop).classList.add('show'); }
+  }));
+
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    placeHand();
+  }
+  const W = window.W || {};
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd'), back = document.getElementById('back'), hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  const gateOf = s => s.dataset.gate ? s.querySelector(s.dataset.gate) : null;
+  const locked = s => !!s.dataset.gate && !s.classList.contains('opened');
+  // until a gate is tapped the hand points at it; otherwise it points at the forward arrow
+  function placeHand() {
+    const s = slides[current], g = locked(s) ? gateOf(s) : null;
+    hand.classList.toggle('on-gate', !!g);
+    if (g) {
+      const c = canvas.getBoundingClientRect(), r = g.getBoundingClientRect(), k = c.width / canvas.offsetWidth;
+      hand.style.left = ((r.left + r.width * 0.65 - c.left) / k) + 'px';
+      hand.style.top = ((r.top + r.height * 0.55 - c.top) / k) + 'px';
+    } else { hand.style.left = ''; hand.style.top = ''; }
+  }
+  function showFwd(delay) {
+    const s = slides[current];
+    fwd.classList.toggle('hidden', current === slides.length - 1 || locked(s));
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1 || locked(s)) handTimer = setTimeout(() => { placeHand(); hand.style.opacity = 1; }, delay != null ? delay : +(s.dataset.hand || 2600));
+  }
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    // load a clip only on its slide, and unload it when leaving so it stops playing
+    document.querySelectorAll('iframe[data-src]').forEach(f => {
+      const on = f.closest('.slide') === slides[current];
+      if (on && !f.getAttribute('src')) f.src = f.dataset.src; else if (!on && f.getAttribute('src')) f.removeAttribute('src');
+    });
+    if (W.onSlide) W.onSlide(current, slides[current]);
+    showFwd();
+  }
+  slides.forEach(s => {
+    const g = gateOf(s); if (!g) return;
+    g.addEventListener('click', () => {
+      if (s.classList.contains('opened')) return;
+      s.classList.add('opened');
+      if (W.onOpen) W.onOpen(s);
+      showFwd(+(s.dataset.after || 1600));
+    });
+  });
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { slides.forEach(s => s.classList.remove('opened')); if (W.onRestart) W.onRestart(); go(0); });
+  window.addEventListener('resize', fit);
+  // preview helper: #N opens slide N; add "open" (e.g. #4open) to show a gated slide already opened
+  const start = parseInt(location.hash.slice(1), 10);
+  const target = start >= 1 && start <= slides.length ? start - 1 : 0;
+  if (location.hash.includes('open')) { slides[target].classList.add('opened'); if (W.onOpen) W.onOpen(slides[target]); }
+  go(target);
+  fit();
+</script>
+</body>
+</html>
