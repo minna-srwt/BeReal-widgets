@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create Your Focus Group Plan: Flow, Tools, Pitfalls</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #E5E0FA; --blue-200: #D3CAF6; --blue: #3E1FBC; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .col { display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px; }
+  .sh { display: flex; align-items: center; gap: 14px; }
+  .sh .n { flex: none; min-width: 56px; height: 56px; padding: 0 8px; border-radius: 14px; border: 3px solid var(--black); background: var(--white); box-shadow: 4px 4px 0 var(--blue-200); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 32px; }
+  .sh h3 { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 34px; line-height: 1.1; }
+  .spacer { flex: 1; }
+  .callout { border: 3px solid var(--black); border-radius: 18px; padding: 14px 18px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); }
+  .vs { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); color: var(--white); font-family: 'DM Serif Text', serif; font-size: 25px; flex: none; }
+  .lab { font-size: 25px; font-weight: 700; line-height: 1.2; text-align: center; }
+  .pop-in { opacity: 0; transform: scale(.4); }
+  .slide.active .pop-in { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  @keyframes popin2 { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+
+  .help { position: relative; display: flex; gap: 12px; padding-right: 110px; }
+  .hbtn { font: inherit; font-size: 16px; font-weight: 700; padding: 9px 16px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; }
+  .hbtn[aria-expanded="true"] { background: var(--black); color: var(--white); }
+  .pop { position: absolute; left: 0; right: 110px; bottom: calc(100% + 10px); display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--white); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .25s, transform .25s; box-shadow: 0 8px 24px rgba(0,0,0,.15); z-index: 4; }
+  .pop.check { border: 3px solid var(--black); } .pop.stuck { border: 3px dashed var(--black); }
+  .pop.show { opacity: 1; transform: none; pointer-events: auto; }
+
+  .slide, .page { font-size: 25px; line-height: 1.42; }
+  .tplbtn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: var(--white); border: 2.5px solid var(--black); color: var(--black); font-size: 16px; font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--blue); white-space: nowrap; }
+  .tplbtn:hover { background: var(--black); color: var(--white); }
+  .tplbtn:hover svg path, .tplbtn:hover svg line { stroke: var(--white); }
+  .s1 { display: flex; flex-direction: column; justify-content: center; gap: 16px; padding-bottom: 30px; }
+  .art { display: flex; justify-content: center; align-items: center; margin-right: 104px; }
+  .art svg { max-height: 150px; width: auto; max-width: 100%; }
+  .check { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border: 3px solid var(--black); border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--blue-50); }
+  .where { align-self: flex-start; font-size: 25px; font-weight: 700; padding: 4px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--blue-50); color: var(--blue); }
+  .bul { display: flex; flex-direction: column; gap: 8px; margin-right: 104px; }
+  .bul li { list-style: none; position: relative; padding-left: 34px; line-height: 1.32; }
+  .bul li::before { content: ''; position: absolute; left: 6px; top: 12px; width: 13px; height: 13px; border-radius: 4px; background: var(--blue); border: 2px solid var(--black); }
+  .quote { border-left: 8px solid var(--blue); padding: 6px 0 6px 20px; margin-right: 104px; font-family: 'DM Serif Text', serif; font-size: 34px; line-height: 1.2; }
+  .attr { font-size: 25px; margin-right: 104px; }
+  .tabs3 { display: flex; flex-wrap: wrap; gap: 10px; margin-right: 104px; }
+  .tab3 { font: inherit; font-size: 25px; font-weight: 800; padding: 6px 16px; border-radius: 999px; border: 3px solid var(--black); background: var(--white); cursor: pointer; }
+  .tab3[aria-selected="true"] { background: var(--blue); color: var(--white); }
+  .pane3 { display: none; } .pane3.on { display: flex; }
+  .card3 { flex-direction: column; gap: 10px; border: 3px solid var(--black); border-radius: 18px; padding: 12px 16px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); margin-right: 104px; }
+  .fld b { display: block; font-size: 25px; font-weight: 800; color: var(--blue); line-height: 1.2; }
+  .fld span { line-height: 1.32; }
+  .bubble { border: 3px solid var(--black); border-radius: 18px 18px 18px 4px; padding: 12px 16px; background: var(--blue-50); font-style: italic; font-size: 25px; line-height: 1.4; margin-right: 104px; }
+  .copy[aria-pressed="true"] { background: var(--blue); color: var(--white); }
+  .copyrow { display: flex; gap: 12px; align-items: center; }
+  .tb { border-collapse: separate; border-spacing: 0; margin-right: 104px; width: calc(100% - 104px); }
+  .tb th, .tb td { border: 2.5px solid var(--black); padding: 8px 10px; font-size: 25px; line-height: 1.25; text-align: left; vertical-align: top; }
+  .tb th { background: var(--blue-50); } .tb th.new { background: var(--blue); color: var(--white); }
+  .ppl { display: flex; justify-content: center; gap: 22px; margin-right: 104px; }
+  .ppl svg { height: 150px; width: auto; }
+  .ppl .bub { opacity: 0; transform: scale(.3); transform-origin: 50% 80%; }
+  .slide.active .ppl .bub { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .slide.active .ppl .pp:nth-child(1) .bub { animation-delay: .5s; } .slide.active .ppl .pp:nth-child(2) .bub { animation-delay: .8s; } .slide.active .ppl .pp:nth-child(3) .bub { animation-delay: 1.1s; } .slide.active .ppl .pp:nth-child(4) .bub { animation-delay: 2.4s; }
+  .ai-line { font-size: 25px; line-height: 1.38; margin-right: 104px; }
+
+  .op { display: flex; gap: 22px; padding-bottom: 30px; }
+  .op.top { flex-direction: column; justify-content: center; }
+  .op.bottom { flex-direction: column-reverse; justify-content: center; }
+  .op.left { flex-direction: row-reverse; align-items: center; }
+  .op.right { flex-direction: row; align-items: center; }
+  .op.center { flex-direction: column; justify-content: center; align-items: center; }
+  .op .txt { display: flex; flex-direction: column; gap: 16px; }
+  .op.left .txt, .op.right .txt { flex: 1; min-width: 0; }
+  .op.top .txt, .op.bottom .txt { margin-right: 104px; }
+  .op .stmt { font-size: 44px; line-height: 1.14; }
+  .op .stmt.long { font-size: 38px; }
+  .scene { position: relative; flex: none; }
+  .op.top .scene, .op.bottom .scene { align-self: center; margin-right: 104px; }
+  .hookrest { margin-right: 0; }
+  .u { position: absolute; }
+  @keyframes p_pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: scale(1); } }
+  @keyframes p_up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+  @keyframes p_fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes p_draw { to { stroke-dashoffset: 0; } }
+  @keyframes p_bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes p_stamp { 0% { opacity: 0; transform: scale(2.4) rotate(-14deg); } 60% { opacity: 1; transform: scale(.9) rotate(-6deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }
+  @keyframes p_shake { 0%,100% { transform: translate(0,0) rotate(0); } 20% { transform: translate(-5px,2px) rotate(-3deg); } 40% { transform: translate(5px,-2px) rotate(3deg); } 60% { transform: translate(-4px,1px) rotate(-2deg); } 80% { transform: translate(3px,-1px) rotate(2deg); } }
+
+  .sl { padding: 66px 40px 26px; }
+  .q-col { display: flex; flex-direction: column; gap: 12px; }
+  .q-col p { line-height: 1.36; }
+  .q-pad { margin-right: 104px; }
+  .q-chip { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.1; padding: 8px 18px; border: 3px solid var(--black); border-radius: 12px; background: var(--blue-50); box-shadow: 6px 6px 0 var(--blue); opacity: 0; transform: translateY(-50px) rotate(-3deg); transition: opacity .3s ease .1s, transform .55s cubic-bezier(.3,1.5,.5,1) .1s; }
+  .slide.active .q-chip { opacity: 1; transform: rotate(-1deg); }
+  .q-tag { align-self: flex-start; font-size: 25px; font-weight: 700; padding: 3px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--blue-50); color: var(--blue); }
+  .q-grid { display: grid; gap: 20px; align-items: center; }
+  .q-qt { border-left: 8px solid var(--blue); padding: 2px 0 2px 16px; font-family: 'DM Serif Text', serif; font-size: 32px; line-height: 1.18; }
+  .q-qt b { color: var(--blue); font-weight: 400; }
+  .q-tick { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: start; }
+  .q-tick .ic { font-size: 30px; line-height: 1.15; opacity: 0; } .slide.active .q-tick .ic { animation: p_stamp .4s ease forwards; }
+  .q-tick span:last-child { line-height: 1.3; }
+  .q-strike { position: relative; display: inline-block; }
+  .q-strike::after { content: ''; position: absolute; left: -4px; right: -4px; top: 52%; height: 5px; background: var(--black); transform: scaleX(0); transform-origin: left; }
+  .slide.active .q-strike::after { animation: q_strike .4s ease forwards; animation-delay: inherit; }
+  @keyframes q_strike { to { transform: scaleX(1); } }
+  .q-bub { border: 3px solid var(--black); border-radius: 18px 18px 18px 4px; padding: 6px 14px; background: var(--white); line-height: 1.25; }
+  .q-bub.v { background: var(--blue-50); }
+  .q-k { font-size: 25px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--blue); }
+  @keyframes q_on { to { opacity: 1; } } @keyframes q_off { to { opacity: 0; } }
+  @keyframes q_pulse { 0% { box-shadow: 0 0 0 0 rgba(62,31,188,.55); } 100% { box-shadow: 0 0 0 26px rgba(62,31,188,0); } }
+
+  .sh { flex-wrap: wrap; row-gap: 6px; } .sh .where { margin-left: 4px; }
+  .copybig { align-self: flex-start; display: inline-flex; gap: 10px; align-items: center; padding: 12px 22px; border: 3px solid var(--black); border-radius: 999px; background: var(--blue); color: var(--white); font-weight: 800; text-decoration: none; box-shadow: 0 5px 0 var(--black); }
+  .copybig:hover { background: var(--black); color: var(--white); }
+  .r-ol { display: flex; flex-wrap: wrap; gap: 8px; margin-right: 104px; }
+  .r-ol span { border: 3px solid var(--black); border-radius: 10px; padding: 2px 12px; background: var(--white); font-weight: 600; opacity: 0; }
+  .slide.active .r-ol span { animation: p_pop .35s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .r-ex { border-left: 8px solid var(--blue); padding: 4px 0 4px 16px; font-style: italic; line-height: 1.32; margin-right: 104px; }
+  .slide.col { gap: 12px; }
+  .slide.col.r-t { gap: 7px; padding-top: 62px; padding-bottom: 14px; } .r-t .bul { gap: 2px; } .r-t p, .r-t li { line-height: 1.3; }
+
+  .r11o { padding: 0; }
+  .r11o .stg { position: absolute; inset: 60px 0 0 0; padding: 10px 40px 18px; display: grid; grid-template-columns: 1fr 330px; gap: 24px; align-items: center; }
+  .r11o .stmt { font-size: 44px; line-height: 1.14; margin-top: 16px; }
+  .r11o .sh { opacity: 1; transform: none; }
+  .r-stack { position: relative; width: 330px; display: flex; flex-direction: column; gap: 4px; padding-left: 26px; margin-bottom: 60px; }
+  .r-blk { border: 4px solid var(--black); border-radius: 10px; background: var(--white); display: flex; align-items: center; padding: 0 12px; font-size: 25px; font-weight: 700; line-height: 1.08; opacity: 0; }
+  .r-blk:nth-child(odd) { background: var(--blue-50); }
+  .slide.active .r-blk { animation: r_in .55s cubic-bezier(.3,1.3,.5,1) forwards; }
+  @keyframes r_in { 0% { opacity: 0; transform: translateX(260px); } 80% { opacity: 1; transform: translateX(-6px); } 100% { opacity: 1; transform: none; } }
+  .r-clk { position: absolute; left: 200px; top: 150px; font-size: 30px; font-weight: 800; color: var(--blue); background: var(--white); border: 3px solid var(--blue); border-radius: 10px; padding: 0 10px; opacity: 0; z-index: 2; }
+  .slide.active .r-clk { animation: p_stamp .3s ease 2.3s forwards, q_off .3s ease 2.9s forwards; }
+  .r-time { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; border: 3px solid var(--black); border-radius: 7px; background: var(--white); overflow: hidden; }
+  .r-time i { display: block; width: 100%; height: 0; background: var(--blue); }
+  .slide.active .r-time i { animation: r_fill 2.4s linear 2.5s forwards; }
+  @keyframes r_fill { to { height: 100%; } }
+  .r-pf { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-right: 104px; }
+  .r-fc { position: relative; height: 128px; perspective: 700px; }
+  .r-fc .fr, .r-fc .bk { position: absolute; inset: 0; border: 3px solid var(--black); border-radius: 14px; padding: 6px 12px; display: flex; align-items: center; line-height: 1.2; backface-visibility: hidden; transition: transform .6s; }
+  .r-fc .fr { background: var(--gray); font-weight: 800; } .r-fc .fr::before { content: '✗ '; margin-right: 6px; }
+  .r-fc .bk { background: var(--blue-50); transform: rotateY(180deg); }
+  .slide.active .r-fc .fr { animation: r_flipA .6s ease forwards; } .slide.active .r-fc .bk { animation: r_flipB .6s ease forwards; }
+  @keyframes r_flipA { to { transform: rotateY(-180deg); } } @keyframes r_flipB { to { transform: rotateY(0); } }
+  .r-fc .bk b { display: block; font-size: 25px; color: var(--blue); }
+  .r-goal { display: flex; flex-direction: column; gap: 6px; margin-right: 104px; }
+  .r-goal .ty { clip-path: inset(0 100% 0 0); } .slide.active .r-goal .ty { animation: r_type 1.8s steps(40) .5s forwards; }
+  @keyframes r_type { to { clip-path: inset(0 0 0 0); } }
+  .r-goal .stp { align-self: flex-start; border: 3px solid var(--blue); border-radius: 10px; padding: 2px 12px; background: var(--white); opacity: 0; }
+  .slide.active .r-goal .stp { animation: p_stamp .45s ease 2.5s forwards; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <a class="tplbtn tpl-link" href="#" target="_blank" rel="noopener">
+        <svg width="16" height="20" viewBox="0 0 16 20" aria-hidden="true"><path d="M1.5 1.5 h8.5 l4.5 4.5 v12.5 h-13 z" fill="#FFFFFF" stroke="#000" stroke-width="2" stroke-linejoin="round"/><line x1="4.5" y1="10" x2="11.5" y2="10" stroke="#000" stroke-width="2"/><line x1="4.5" y1="14" x2="11.5" y2="14" stroke="#000" stroke-width="2"/></svg>
+        Template ↗
+      </a>
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+<section class="slide r11o active" data-hand="5000"><div class="stg"><div><div class="sh auto"><span class="n">5</span><h3>Design your session flow</h3><span class="where">In your doc: Session Flow</span></div><p class="stmt slam">Plan your session in 5 short phases:</p></div><div class="r-stack" aria-hidden="true"><span class="r-time"><i></i></span><div class="r-blk" style="height:58px;animation-delay:0.40s">1. Introduction</div><div class="r-blk" style="height:66px;animation-delay:0.75s">2. BeReal Experience Warm-Up</div><div class="r-blk" style="height:78px;animation-delay:1.10s">3. Prototype Demo</div><div class="r-blk" style="height:100px;animation-delay:1.45s">4. Discussion</div><div class="r-blk" style="height:58px;animation-delay:1.80s">5. Quick Survey</div><span class="r-clk">click</span></div></div></section><section class="slide col" data-hand="3000"><div class="sh auto"><span class="n">5</span><h3>Design your session flow</h3><span class="where">In your doc: Session Flow</span></div><div class="tabset auto d1"><div class="tabs3" role="tablist"><button class="tab3" type="button" role="tab" aria-selected="true">1</button><button class="tab3" type="button" role="tab" aria-selected="false">2</button><button class="tab3" type="button" role="tab" aria-selected="false">3</button><button class="tab3" type="button" role="tab" aria-selected="false">4</button><button class="tab3" type="button" role="tab" aria-selected="false">5</button></div><div style="height:12px"></div><div class="pane3 card3 on"><div class="fld"><b>1. Introduction · 5 min</b><span>Welcome &amp; explain purpose</span></div><div class="fld"><b>Example Activities</b><span>"We're testing a new BeReal feature. No right or wrong answers."</span></div></div><div class="pane3 card3"><div class="fld"><b>2. BeReal Experience Warm-Up · 5 min</b><span>Get participants talking</span></div><div class="fld"><b>Example Activities</b><span>"How often do you use BeReal?" "What makes you post or skip posting?"</span></div></div><div class="pane3 card3"><div class="fld"><b>3. Prototype Demo · 10 min</b><span>Let participants explore</span></div><div class="fld"><b>Example Activities</b><span>Share your wireframe and say, "Click through as you normally would."</span></div></div><div class="pane3 card3"><div class="fld"><b>4. Discussion · 15 min</b><span>Ask open-ended questions</span></div><div class="fld"><b>Example Activities</b><span>Focus on usability, feelings, and perceived value</span></div></div><div class="pane3 card3"><div class="fld"><b>5. Quick Survey · 5 min</b><span>Collect short rating-scale feedback</span></div><div class="fld"><b>Example Activities</b><span>Share your Google Form or Typeform link</span></div></div></div><p class="auto d3 q-pad"><b>Total:</b> 30–45 minutes: warm up → hands-on experience → reflection → quick survey.</p><p class="auto d4 q-pad">Fill in the duration and what you'll do or say for each stage in <b>Session Flow</b>.</p></section><section class="slide col" data-hand="3200"><div class="sh auto"><span class="n">6</span><h3>Prepare your tools</h3><span class="where">In your doc: Tools</span></div><p class="auto d1 q-pad">Before your session, make sure you have:</p><div class="q-col q-pad" style="gap:8px"><div class="q-tick auto" style="transition-delay:0.60s"><span class="ic" style="animation-delay:0.60s">✅</span><span><b>Your prototype:</b> wireframe link or file tested and ready.</span></div><div class="q-tick auto" style="transition-delay:1.00s"><span class="ic" style="animation-delay:1.00s">✅</span><span><b>Your discussion guide:</b> 5–7 open-ended questions (you'll write these in the next step).</span></div><div class="q-tick auto" style="transition-delay:1.40s"><span class="ic" style="animation-delay:1.40s">✅</span><span><b>Your survey link:</b> Google Form or Typeform.</span></div><div class="q-tick auto" style="transition-delay:1.80s"><span class="ic" style="animation-delay:1.80s">✅</span><span><b>Your note-taking setup:</b> a doc for quick notes · a recording tool, only if everyone agrees to be recorded · one backup note-taker (optional)</span></div></div><p class="auto q-pad" style="transition-delay:2.4s">Tick off the checklist in <b>Tools</b>.</p></section><section class="slide col" data-hand="3800"><div class="sh auto"><span class="n">7</span><h3>Anticipate and avoid common pitfalls</h3></div><div class="r-pf auto d1"><div class="r-fc"><div class="fr" style="animation-delay:1.0s">Talking too much</div><div class="bk" style="animation-delay:1.0s"><span><b>How to fix it</b>Remember: your job is to <i>listen</i>, not explain.</span></div></div><div class="r-fc"><div class="fr" style="animation-delay:1.5s">Rushing the demo</div><div class="bk" style="animation-delay:1.5s"><span><b>How to fix it</b>Give people 1–2 minutes of quiet to explore before asking questions.</span></div></div><div class="r-fc"><div class="fr" style="animation-delay:2.0s">Asking leading questions</div><div class="bk" style="animation-delay:2.0s"><span><b>How to fix it</b>Avoid "Do you like this?"; ask "What do you think?" instead.</span></div></div><div class="r-fc"><div class="fr" style="animation-delay:2.5s">Forgetting the wrap-up</div><div class="bk" style="animation-delay:2.5s"><span><b>How to fix it</b>Always thank participants and explain what happens next.</span></div></div></div><p class="auto q-pad" style="transition-delay:3.2s"><span class="q-tag">In your doc (optional)</span> Write the pitfall you're most likely to fall into, and your fix, under <b>Session Flow</b>.</p></section><section class="slide col" data-hand="3600"><span class="q-chip">Example: BeReal Focus Group Plan (excerpt)</span><div class="r-goal auto d1"><p class="ty"><b>Goal:</b> To understand whether the feature makes users more likely to post daily while keeping BeReal's authentic, low-pressure feel.</p><p class="stp"><b>My feature isn't working if:</b> most participants say the joint notification would feel like pressure, or can't explain what it does.</p></div><div class="tabset auto d4"><div class="tabs3" role="tablist"><button class="tab3" type="button" role="tab" aria-selected="true">Participants</button><button class="tab3" type="button" role="tab" aria-selected="false">Session Format</button><button class="tab3" type="button" role="tab" aria-selected="false">Session Flow</button></div><div style="height:12px"></div><div class="pane3 card3 on"><p>7 total (4 frequent BeReal users, 2 occasional users, 1 new user).</p></div><div class="pane3 card3"><p>Virtual via Zoom (35 mins). Tools: wireframe link, Google Form, notes doc.</p></div><div class="pane3 card3"><p>1. Intro (5 mins) · 2. BeReal warm-up discussion (5 mins) · 3. Prototype demo (10 mins) · 4. Group discussion (15 mins) · 5. Survey (5 mins)</p></div></div></section>
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg>
+</div>
+
+<script>
+  document.querySelectorAll('.tabset').forEach(ts => {
+    const tabs = [...ts.querySelectorAll('.tab3')], panes = [...ts.querySelectorAll('.pane3')];
+    tabs.forEach((t, i) => t.addEventListener('click', () => { tabs.forEach((x, k) => x.setAttribute('aria-selected', k === i ? 'true' : 'false')); panes.forEach((p, k) => p.classList.toggle('on', k === i)); }));
+  });
+  document.querySelectorAll('.copy').forEach(b => b.addEventListener('click', () => {
+    const t = document.getElementById(b.dataset.copy).textContent.trim().replace(/^"|"$/g, '');
+    const done = () => { b.setAttribute('aria-pressed', 'true'); b.textContent = '✓ Copied'; setTimeout(() => { b.setAttribute('aria-pressed', 'false'); b.textContent = '⧉ Copy prompt'; }, 1800); };
+    const fallback = () => { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); done(); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done, fallback); else fallback();
+  }));
+
+  window.W = Object.assign(window.W || {}, { onSlide: () => closePops() });
+  function closePops() {
+    document.querySelectorAll('.hbtn[data-pop]').forEach(b => { b.setAttribute('aria-expanded', 'false'); document.getElementById(b.dataset.pop).classList.remove('show'); });
+  }
+  document.querySelectorAll('.hbtn[data-pop]').forEach(b => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') === 'true';
+    closePops();
+    if (!open) { b.setAttribute('aria-expanded', 'true'); document.getElementById(b.dataset.pop).classList.add('show'); }
+  }));
+
+  const TEMPLATE_URL = 'https://docs.google.com/document/d/1g33TTeR9PGgxOJnS4VTPOK8i7yfAfsXZkuP_5boQfT0/copy';
+  document.querySelectorAll('.tpl-link').forEach(a => a.href = TEMPLATE_URL);
+
+  (function () {
+    const prev = (window.W || {}).onSlide;
+    function run(s) {
+      s.querySelectorAll('[data-count]').forEach(el => {
+        const to = +el.dataset.count, dec = +(el.dataset.dec || 0), dl = +(el.dataset.delay || 0), dur = +(el.dataset.dur || 1400), pre = el.dataset.pre || '';
+        const fmt = v => pre + (dec ? v.toFixed(dec) : Math.round(v).toLocaleString('en-US'));
+        el.textContent = fmt(0); const t0 = performance.now() + dl;
+        (function tick(now) { const k = Math.min(1, Math.max(0, (now - t0) / dur)); el.textContent = fmt(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(tick); })(t0);
+        clearTimeout(el._t); el._t = setTimeout(() => { el.textContent = fmt(to); }, dl + dur + 80);
+      });
+    }
+    window.W = Object.assign(window.W || {}, { onSlide: (i, s) => { if (prev) prev(i, s); run(s); } });
+  })();
+
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    placeHand();
+  }
+  const W = window.W || {};
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd'), back = document.getElementById('back'), hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  const gateOf = s => s.dataset.gate ? s.querySelector(s.dataset.gate) : null;
+  const locked = s => !!s.dataset.gate && !s.classList.contains('opened');
+  // until a gate is tapped the hand points at it; otherwise it points at the forward arrow
+  function placeHand() {
+    const s = slides[current], g = locked(s) ? gateOf(s) : null;
+    hand.classList.toggle('on-gate', !!g);
+    if (g) {
+      const c = canvas.getBoundingClientRect(), r = g.getBoundingClientRect(), k = c.width / canvas.offsetWidth;
+      hand.style.left = ((r.left + r.width * 0.65 - c.left) / k) + 'px';
+      hand.style.top = ((r.top + r.height * 0.55 - c.top) / k) + 'px';
+    } else { hand.style.left = ''; hand.style.top = ''; }
+  }
+  function showFwd(delay) {
+    const s = slides[current];
+    fwd.classList.toggle('hidden', current === slides.length - 1 || locked(s));
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1 || locked(s)) handTimer = setTimeout(() => { placeHand(); hand.style.opacity = 1; }, delay != null ? delay : +(s.dataset.hand || 2600));
+  }
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    // load a clip only on its slide, and unload it when leaving so it stops playing
+    document.querySelectorAll('iframe[data-src]').forEach(f => {
+      const on = f.closest('.slide') === slides[current];
+      if (on && !f.getAttribute('src')) f.src = f.dataset.src; else if (!on && f.getAttribute('src')) f.removeAttribute('src');
+    });
+    if (W.onSlide) W.onSlide(current, slides[current]);
+    showFwd();
+  }
+  slides.forEach(s => {
+    const g = gateOf(s); if (!g) return;
+    g.addEventListener('click', () => {
+      if (s.classList.contains('opened')) return;
+      s.classList.add('opened');
+      if (W.onOpen) W.onOpen(s);
+      showFwd(+(s.dataset.after || 1600));
+    });
+  });
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { slides.forEach(s => s.classList.remove('opened')); if (W.onRestart) W.onRestart(); go(0); });
+  window.addEventListener('resize', fit);
+  // preview helper: #N opens slide N; add "open" (e.g. #4open) to show a gated slide already opened
+  const start = parseInt(location.hash.slice(1), 10);
+  const target = start >= 1 && start <= slides.length ? start - 1 : 0;
+  if (location.hash.includes('open')) { slides[target].classList.add('opened'); if (W.onOpen) W.onOpen(slides[target]); }
+  go(target);
+  fit();
+</script>
+</body>
+</html>
