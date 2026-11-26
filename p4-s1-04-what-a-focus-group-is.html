@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What a Focus Group Is</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #E5E0FA; --blue-200: #D3CAF6; --blue: #3E1FBC; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .col { display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px; }
+  .sh { display: flex; align-items: center; gap: 14px; }
+  .sh .n { flex: none; min-width: 56px; height: 56px; padding: 0 8px; border-radius: 14px; border: 3px solid var(--black); background: var(--white); box-shadow: 4px 4px 0 var(--blue-200); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 32px; }
+  .sh h3 { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 34px; line-height: 1.1; }
+  .spacer { flex: 1; }
+  .callout { border: 3px solid var(--black); border-radius: 18px; padding: 14px 18px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); }
+  .vs { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); color: var(--white); font-family: 'DM Serif Text', serif; font-size: 25px; flex: none; }
+  .lab { font-size: 25px; font-weight: 700; line-height: 1.2; text-align: center; }
+  .pop-in { opacity: 0; transform: scale(.4); }
+  .slide.active .pop-in { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  @keyframes popin2 { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+
+  .help { position: relative; display: flex; gap: 12px; padding-right: 110px; }
+  .hbtn { font: inherit; font-size: 16px; font-weight: 700; padding: 9px 16px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; }
+  .hbtn[aria-expanded="true"] { background: var(--black); color: var(--white); }
+  .pop { position: absolute; left: 0; right: 110px; bottom: calc(100% + 10px); display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--white); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .25s, transform .25s; box-shadow: 0 8px 24px rgba(0,0,0,.15); z-index: 4; }
+  .pop.check { border: 3px solid var(--black); } .pop.stuck { border: 3px dashed var(--black); }
+  .pop.show { opacity: 1; transform: none; pointer-events: auto; }
+
+  .slide, .page { font-size: 25px; line-height: 1.42; }
+  .tplbtn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: var(--white); border: 2.5px solid var(--black); color: var(--black); font-size: 16px; font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--blue); white-space: nowrap; }
+  .tplbtn:hover { background: var(--black); color: var(--white); }
+  .tplbtn:hover svg path, .tplbtn:hover svg line { stroke: var(--white); }
+  .s1 { display: flex; flex-direction: column; justify-content: center; gap: 16px; padding-bottom: 30px; }
+  .art { display: flex; justify-content: center; align-items: center; margin-right: 104px; }
+  .art svg { max-height: 150px; width: auto; max-width: 100%; }
+  .check { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border: 3px solid var(--black); border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--blue-50); }
+  .where { align-self: flex-start; font-size: 25px; font-weight: 700; padding: 4px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--blue-50); color: var(--blue); }
+  .bul { display: flex; flex-direction: column; gap: 8px; margin-right: 104px; }
+  .bul li { list-style: none; position: relative; padding-left: 34px; line-height: 1.32; }
+  .bul li::before { content: ''; position: absolute; left: 6px; top: 12px; width: 13px; height: 13px; border-radius: 4px; background: var(--blue); border: 2px solid var(--black); }
+  .quote { border-left: 8px solid var(--blue); padding: 6px 0 6px 20px; margin-right: 104px; font-family: 'DM Serif Text', serif; font-size: 34px; line-height: 1.2; }
+  .attr { font-size: 25px; margin-right: 104px; }
+  .tabs3 { display: flex; flex-wrap: wrap; gap: 10px; margin-right: 104px; }
+  .tab3 { font: inherit; font-size: 25px; font-weight: 800; padding: 6px 16px; border-radius: 999px; border: 3px solid var(--black); background: var(--white); cursor: pointer; }
+  .tab3[aria-selected="true"] { background: var(--blue); color: var(--white); }
+  .pane3 { display: none; } .pane3.on { display: flex; }
+  .card3 { flex-direction: column; gap: 10px; border: 3px solid var(--black); border-radius: 18px; padding: 12px 16px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); margin-right: 104px; }
+  .fld b { display: block; font-size: 25px; font-weight: 800; color: var(--blue); line-height: 1.2; }
+  .fld span { line-height: 1.32; }
+  .bubble { border: 3px solid var(--black); border-radius: 18px 18px 18px 4px; padding: 12px 16px; background: var(--blue-50); font-style: italic; font-size: 25px; line-height: 1.4; margin-right: 104px; }
+  .copy[aria-pressed="true"] { background: var(--blue); color: var(--white); }
+  .copyrow { display: flex; gap: 12px; align-items: center; }
+  .tb { border-collapse: separate; border-spacing: 0; margin-right: 104px; width: calc(100% - 104px); }
+  .tb th, .tb td { border: 2.5px solid var(--black); padding: 8px 10px; font-size: 25px; line-height: 1.25; text-align: left; vertical-align: top; }
+  .tb th { background: var(--blue-50); } .tb th.new { background: var(--blue); color: var(--white); }
+  .ppl { display: flex; justify-content: center; gap: 22px; margin-right: 104px; }
+  .ppl svg { height: 150px; width: auto; }
+  .ppl .bub { opacity: 0; transform: scale(.3); transform-origin: 50% 80%; }
+  .slide.active .ppl .bub { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .slide.active .ppl .pp:nth-child(1) .bub { animation-delay: .5s; } .slide.active .ppl .pp:nth-child(2) .bub { animation-delay: .8s; } .slide.active .ppl .pp:nth-child(3) .bub { animation-delay: 1.1s; } .slide.active .ppl .pp:nth-child(4) .bub { animation-delay: 2.4s; }
+  .ai-line { font-size: 25px; line-height: 1.38; margin-right: 104px; }
+
+  .op { display: flex; gap: 22px; padding-bottom: 30px; }
+  .op.top { flex-direction: column; justify-content: center; }
+  .op.bottom { flex-direction: column-reverse; justify-content: center; }
+  .op.left { flex-direction: row-reverse; align-items: center; }
+  .op.right { flex-direction: row; align-items: center; }
+  .op.center { flex-direction: column; justify-content: center; align-items: center; }
+  .op .txt { display: flex; flex-direction: column; gap: 16px; }
+  .op.left .txt, .op.right .txt { flex: 1; min-width: 0; }
+  .op.top .txt, .op.bottom .txt { margin-right: 104px; }
+  .op .stmt { font-size: 44px; line-height: 1.14; }
+  .op .stmt.long { font-size: 38px; }
+  .scene { position: relative; flex: none; }
+  .op.top .scene, .op.bottom .scene { align-self: center; margin-right: 104px; }
+  .hookrest { margin-right: 0; }
+  .u { position: absolute; }
+  @keyframes p_pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: scale(1); } }
+  @keyframes p_up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+  @keyframes p_fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes p_draw { to { stroke-dashoffset: 0; } }
+  @keyframes p_bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes p_stamp { 0% { opacity: 0; transform: scale(2.4) rotate(-14deg); } 60% { opacity: 1; transform: scale(.9) rotate(-6deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }
+  @keyframes p_shake { 0%,100% { transform: translate(0,0) rotate(0); } 20% { transform: translate(-5px,2px) rotate(-3deg); } 40% { transform: translate(5px,-2px) rotate(3deg); } 60% { transform: translate(-4px,1px) rotate(-2deg); } 80% { transform: translate(3px,-1px) rotate(2deg); } }
+
+  .sl { padding: 66px 40px 26px; }
+  .q-col { display: flex; flex-direction: column; gap: 12px; }
+  .q-col p { line-height: 1.36; }
+  .q-pad { margin-right: 104px; }
+  .q-chip { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.1; padding: 8px 18px; border: 3px solid var(--black); border-radius: 12px; background: var(--blue-50); box-shadow: 6px 6px 0 var(--blue); opacity: 0; transform: translateY(-50px) rotate(-3deg); transition: opacity .3s ease .1s, transform .55s cubic-bezier(.3,1.5,.5,1) .1s; }
+  .slide.active .q-chip { opacity: 1; transform: rotate(-1deg); }
+  .q-tag { align-self: flex-start; font-size: 25px; font-weight: 700; padding: 3px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--blue-50); color: var(--blue); }
+  .q-grid { display: grid; gap: 20px; align-items: center; }
+  .q-qt { border-left: 8px solid var(--blue); padding: 2px 0 2px 16px; font-family: 'DM Serif Text', serif; font-size: 32px; line-height: 1.18; }
+  .q-qt b { color: var(--blue); font-weight: 400; }
+  .q-tick { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: start; }
+  .q-tick .ic { font-size: 30px; line-height: 1.15; opacity: 0; } .slide.active .q-tick .ic { animation: p_stamp .4s ease forwards; }
+  .q-tick span:last-child { line-height: 1.3; }
+  .q-strike { position: relative; display: inline-block; }
+  .q-strike::after { content: ''; position: absolute; left: -4px; right: -4px; top: 52%; height: 5px; background: var(--black); transform: scaleX(0); transform-origin: left; }
+  .slide.active .q-strike::after { animation: q_strike .4s ease forwards; animation-delay: inherit; }
+  @keyframes q_strike { to { transform: scaleX(1); } }
+  .q-bub { border: 3px solid var(--black); border-radius: 18px 18px 18px 4px; padding: 6px 14px; background: var(--white); line-height: 1.25; }
+  .q-bub.v { background: var(--blue-50); }
+  .q-k { font-size: 25px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--blue); }
+  @keyframes q_on { to { opacity: 1; } } @keyframes q_off { to { opacity: 0; } }
+  @keyframes q_pulse { 0% { box-shadow: 0 0 0 0 rgba(62,31,188,.55); } 100% { box-shadow: 0 0 0 26px rgba(62,31,188,0); } }
+
+  .d4o { padding: 0; }
+  .d4o .stg { position: absolute; inset: 60px 0 0 0; padding: 8px 40px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .d4-pn { display: grid; grid-template-columns: 1fr 1fr 1.35fr; gap: 10px; margin-right: 104px; }
+  .d4-pn div { display: flex; gap: 8px; align-items: flex-start; border: 3px solid var(--black); border-radius: 12px; padding: 4px 10px; line-height: 1.12; font-size: 25px; }
+  .d4-pn b { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 30px; line-height: 1; }
+  .d4-pn .on { background: var(--blue-50); box-shadow: 5px 5px 0 var(--blue); font-weight: 700; }
+  .d4-pn .off { border-style: dashed; color: #555; }
+  .d4o .stmt { font-size: 32px; line-height: 1.16; margin-right: 104px; }
+  .d4-sc { position: relative; width: 640px; height: 250px; align-self: center; flex: none; }
+  .d4-mg { position: absolute; left: 30px; top: 60px; width: 150px; transform-origin: 50% 50%; }
+  .slide.active .d4-mg { animation: p_shake .3s linear .4s 6, d4_out .4s ease 2.6s forwards; }
+  @keyframes d4_out { to { opacity: 0; transform: scale(.3) rotate(-30deg); } }
+  .d4-wv { position: absolute; left: 160px; top: 70px; width: 60px; height: 100px; border: 6px solid var(--blue); border-left: 0; border-top-color: transparent; border-bottom-color: transparent; border-radius: 0 60px 60px 0; opacity: 0; }
+  .slide.active .d4-wv { animation: d4_wave .8s ease-out infinite; animation-iteration-count: 3; }
+  .d4-wv.w2 { animation-delay: .27s !important; } .d4-wv.w3 { animation-delay: .54s !important; }
+  @keyframes d4_wave { 0% { opacity: 1; transform: translateX(0) scale(.6); } 100% { opacity: 0; transform: translateX(110px) scale(1.4); } }
+  .d4-ear { position: absolute; left: 40px; top: 50px; font-size: 120px; line-height: 1; opacity: 0; }
+  .slide.active .d4-ear { animation: p_pop .5s cubic-bezier(.3,1.6,.5,1) 2.7s forwards; }
+  .d4-h { position: absolute; transform-origin: 50% 100%; }
+  .slide.active .d4-h { animation: d4_lean 2.6s ease .3s both, d4_in .6s cubic-bezier(.3,1.5,.5,1) 2.8s forwards; }
+  @keyframes d4_lean { 0% { transform: none; } 20%, 100% { transform: rotate(16deg) translateX(10px); } }
+  @keyframes d4_in { from { transform: rotate(16deg) translateX(10px); } to { transform: rotate(-12deg); } }
+  .d4-fl { position: absolute; width: 30px; height: 22px; border: 3px solid var(--black); border-radius: 10px 10px 10px 2px; background: var(--blue-200); opacity: 0; }
+  .slide.active .d4-fl { animation: d4_flow 1.4s ease-in infinite; }
+  @keyframes d4_flow { 0% { opacity: 0; transform: none; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-1 * var(--dx, 230px)), 10px) scale(.6); } }
+
+  .d4-wv2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-right: 104px; align-items: center; }
+  .d4-what { display: flex; align-items: center; gap: 10px; border: 3px solid var(--black); border-radius: 16px; padding: 10px 14px; background: var(--white); }
+  .d4-what .ft { font-size: 30px; opacity: 0; } .slide.active .d4-what .ft { animation: q_on .2s ease forwards; }
+  .d4-what .fig { position: relative; margin-left: auto; }
+  .d4-what .mag { position: absolute; left: -54px; top: 6px; font-size: 40px; opacity: 0; }
+  .slide.active .d4-what .mag { animation: d4_mag 1s ease 2.2s forwards; }
+  @keyframes d4_mag { from { opacity: 0; transform: translateX(-60px); } to { opacity: 1; transform: none; } }
+  .d4-what .th { position: absolute; left: 30px; top: -36px; font-size: 25px; border: 3px solid var(--black); border-radius: 50%; padding: 4px 10px; background: var(--blue-50); opacity: 0; }
+  .slide.active .d4-what .th { animation: p_pop .4s ease 3s forwards; }
+  .d4-what .lb { font-size: 25px; font-weight: 800; color: var(--blue); }
+  .d4-lp { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .d4-lp span { font-size: 30px; font-weight: 800; border: 3px solid var(--black); border-radius: 999px; padding: 0 18px; background: var(--white); }
+  .d4-lp .ls { background: var(--blue); color: var(--white); opacity: 0; } .slide.active .d4-lp .ls { animation: p_stamp .45s ease 4s forwards; }
+
+  .d4-two { display: grid; grid-template-columns: 1fr 250px; gap: 22px; align-items: center; }
+  .d4-tbl { position: relative; width: 250px; height: 250px; }
+  .d4-tbl .t { position: absolute; left: 65px; top: 65px; width: 120px; height: 120px; border-radius: 50%; border: 4px solid var(--black); background: var(--white); }
+  .d4-tbl .s { position: absolute; width: 44px; height: 44px; border-radius: 50%; border: 4px solid var(--black); background: var(--blue-200); opacity: 0; }
+  .slide.active .d4-tbl .s { animation: c3_drop .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  @keyframes c3_drop { from { opacity: 0; transform: translateY(-50px) scale(1.4); } to { opacity: 1; transform: none; } }
+  .d4-tbl .s.f { background: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 25px; }
+
+  .d4-sort { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 14px; margin-right: 104px; margin-top: -4px; }
+  .d4-s5 { gap: 8px; } .d4-s5 .q-chip { font-size: 27px; padding: 4px 14px; }
+  .d4-sort .hd { font-weight: 800; line-height: 1.15; padding: 2px 4px; border-bottom: 4px solid var(--black); }
+  .d4-sort .hd.n { border-bottom-style: dashed; }
+  .d4-sort .cd { border: 3px solid var(--black); border-radius: 12px; padding: 2px 10px; line-height: 1.14; background: var(--blue-50); opacity: 0; }
+  .d4-sort .cd.n { background: var(--white); }
+  .slide.active .d4-sort .cd { animation: d4_l .5s cubic-bezier(.3,1.3,.5,1) forwards; }
+  .slide.active .d4-sort .cd.n { animation-name: d4_r; }
+  @keyframes d4_l { from { opacity: 0; transform: translateX(160px) scale(.7); } to { opacity: 1; transform: none; } }
+  @keyframes d4_r { from { opacity: 0; transform: translateX(-160px) scale(.7); } to { opacity: 1; transform: none; } }
+
+  .d4-why { display: flex; align-items: center; justify-content: center; gap: 30px; margin-right: 104px; }
+  .d4-why .bars { display: flex; align-items: flex-end; gap: 8px; height: 120px; opacity: .55; }
+  .d4-why .bars i { width: 28px; border: 3px solid var(--black); background: var(--gray); border-radius: 4px 4px 0 0; }
+  .d4-why .ar { font-size: 50px; }
+  .d4-why .bb { position: relative; width: 330px; height: 190px; border: 4px solid var(--black); border-radius: 50%; background: var(--blue-50); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+  .d4-why .bb span { font-size: 28px; font-weight: 800; border: 3px solid var(--black); border-radius: 999px; padding: 0 14px; background: var(--white); opacity: 0; }
+  .slide.active .d4-why .bb span { animation: d4_fall .55s cubic-bezier(.3,1.5,.5,1) forwards; }
+  @keyframes d4_fall { from { opacity: 0; transform: translateY(-140px); } to { opacity: 1; transform: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+<section class="slide d4o active" data-hand="4800"><div class="stg"><div class="d4-pn"><div class="on"><b>1</b><span>Why this module matters</span></div><div class="off"><b>2</b><span>What is a Focus Group?</span></div><div class="off"><b>3</b><span>Why product managers use focus groups</span></div></div><p class="stmt slam">Before you invite people to test your prototype, you need to understand <i>what kind of feedback</i> you're looking for, and <i>how to get it</i>.</p><div class="d4-sc" aria-hidden="true"><svg class="d4-mg" viewBox="0 0 150 120" aria-hidden="true"><path d="M10 44 H40 L110 8 V112 L40 76 H10 Z" fill="#FFF" stroke="#000" stroke-width="5" stroke-linejoin="round"/><path d="M22 76 L30 108 H48 L44 80" fill="#FFF" stroke="#000" stroke-width="5" stroke-linejoin="round"/><rect x="108" y="40" width="14" height="40" rx="5" fill="#3E1FBC" stroke="#000" stroke-width="4"/></svg><span class="d4-wv"></span><span class="d4-wv w2"></span><span class="d4-wv w3"></span><span class="d4-ear">👂</span><span class="d4-h" style="left:330px;top:40px"><svg class="" viewBox="0 0 60 80" style="height:84px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg></span><span class="d4-h" style="left:420px;top:40px"><svg class="" viewBox="0 0 60 80" style="height:84px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg></span><span class="d4-h" style="left:510px;top:40px"><svg class="" viewBox="0 0 60 80" style="height:84px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg></span><span class="d4-h" style="left:370px;top:150px"><svg class="" viewBox="0 0 60 80" style="height:84px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg></span><span class="d4-h" style="left:460px;top:150px"><svg class="" viewBox="0 0 60 80" style="height:84px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg></span><span class="d4-h" style="left:550px;top:150px"><svg class="" viewBox="0 0 60 80" style="height:84px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg></span><span class="d4-fl" style="left:350px;top:70px;animation-delay:3.00s"></span><span class="d4-fl" style="left:440px;top:70px;animation-delay:3.22s"></span><span class="d4-fl" style="left:530px;top:70px;animation-delay:3.44s"></span><span class="d4-fl" style="left:350px;top:170px;animation-delay:3.66s"></span><span class="d4-fl" style="left:440px;top:170px;animation-delay:3.88s"></span><span class="d4-fl" style="left:530px;top:170px;animation-delay:4.10s"></span></div></div></section><section class="slide sl q-col" data-hand="4400"><p class="auto q-pad">A <b>focus group</b> is one of the most useful research tools in product management. It helps you uncover <b>why people feel a certain way</b>, not just <i>what</i> they do.</p><p class="auto d1 q-pad">Product managers use focus groups when they need to see <b>real reactions, emotions, and conversations</b> around a product idea. It's about listening, not pitching.</p><div class="d4-wv2 auto d2" aria-hidden="true"><div class="d4-what"><span class="lb">what</span><span class="ft" style="animation-delay:0.6s">👣</span><span class="ft" style="animation-delay:0.9s">👣</span><span class="ft" style="animation-delay:1.2s">👣</span><span class="ft" style="animation-delay:1.5s">👣</span><span class="fig"><span class="mag">🔍</span><svg class="" viewBox="0 0 60 80" style="height:70px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg><span class="th">❤️ why</span></span></div><div class="d4-lp"><span class="q-strike" style="animation-delay:3.6s">pitching</span><span class="ls">listening</span></div></div></section><section class="slide sl" data-hand="3000"><div class="d4-two" style="height:100%"><div class="q-col"><span class="q-chip">What is a Focus Group?</span><p class="auto d1">A <b>focus group</b> is a small, structured discussion (usually 5–10 people) led by a facilitator who asks open-ended questions to understand people's experiences, opinions, and reactions.</p><p class="auto d3">In this project, your "product" is your <b>BeReal feature prototype</b>, and your focus group is your test audience (friends, classmates, or peers).</p></div><div class="d4-tbl" aria-hidden="true"><span class="t"></span><span class="s f" style="left:103px;top:0px;animation-delay:0.80s">🎤</span><span class="s" style="left:186px;top:34px;animation-delay:1.02s"></span><span class="s" style="left:206px;top:120px;animation-delay:1.24s"></span><span class="s" style="left:160px;top:196px;animation-delay:1.46s"></span><span class="s" style="left:46px;top:196px;animation-delay:1.68s"></span><span class="s" style="left:0px;top:120px;animation-delay:1.90s"></span><span class="s" style="left:20px;top:34px;animation-delay:2.12s"></span></div></div></section><section class="slide sl q-col" data-hand="3200"><p class="auto stmt" style="font-size:36px">Your job will be to:</p><div class="q-col q-pad" style="gap:10px"><div class="q-tick auto" style="transition-delay:0.50s"><span class="ic" style="animation-delay:0.50s">⚖️</span><span>Introduce your idea neutrally (without nudging people toward an answer)</span></div><div class="q-tick auto" style="transition-delay:0.95s"><span class="ic" style="animation-delay:0.95s">👆</span><span>Let participants explore the prototype</span></div><div class="q-tick auto" style="transition-delay:1.40s"><span class="ic" style="animation-delay:1.40s">❓</span><span>Guide the discussion with thoughtful, open questions</span></div><div class="q-tick auto" style="transition-delay:1.85s"><span class="ic" style="animation-delay:1.85s">👀</span><span>Notice tone, expressions, and reactions</span></div><div class="q-tick auto" style="transition-delay:2.30s"><span class="ic" style="animation-delay:2.30s">✍️</span><span>Record what people say <i>and how they say it</i></span></div></div></section><section class="slide sl q-col d4-s5" data-hand="3600"><span class="q-chip">Why product managers use focus groups</span><p class="auto q-pad">Product teams use focus groups when they need <b>depth</b>, not data points.</p><div class="d4-sort auto d1"><div class="hd">When to Use a Focus Group</div><div class="hd n">When <i>Not</i> to Use a Focus Group</div><div class="cd" style="animation-delay:0.9s">To explore <i>why</i> users behave or feel a certain way</div><div class="cd n" style="animation-delay:1.1s">To measure large-scale patterns or statistics</div><div class="cd" style="animation-delay:1.4s">To test new ideas or early prototypes</div><div class="cd n" style="animation-delay:1.6s">To validate a finished product with numbers</div><div class="cd" style="animation-delay:1.9s">To observe natural reactions</div><div class="cd n" style="animation-delay:2.1s">To calculate exact satisfaction scores</div><div class="cd" style="animation-delay:2.4s">To collect quotes, themes, and language for future surveys</div><div class="cd n" style="animation-delay:2.6s">To predict market size or growth rates</div></div></section><section class="slide sl q-col" data-hand="3200"><p class="stmt auto q-pad" style="font-size:36px">Focus groups help you understand <b>emotion, perception, and context</b>: the "why" behind the numbers.</p><div class="d4-why auto d1" aria-hidden="true"><div class="bars"><i style="height:40px"></i><i style="height:80px"></i><i style="height:60px"></i><i style="height:110px"></i><i style="height:70px"></i></div><span class="ar">➜</span><div class="bb"><span style="animation-delay:1.20s">emotion</span><span style="animation-delay:1.65s">perception</span><span style="animation-delay:2.10s">context</span></div></div></section>
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg>
+</div>
+
+<script>
+  document.querySelectorAll('.tabset').forEach(ts => {
+    const tabs = [...ts.querySelectorAll('.tab3')], panes = [...ts.querySelectorAll('.pane3')];
+    tabs.forEach((t, i) => t.addEventListener('click', () => { tabs.forEach((x, k) => x.setAttribute('aria-selected', k === i ? 'true' : 'false')); panes.forEach((p, k) => p.classList.toggle('on', k === i)); }));
+  });
+  document.querySelectorAll('.copy').forEach(b => b.addEventListener('click', () => {
+    const t = document.getElementById(b.dataset.copy).textContent.trim().replace(/^"|"$/g, '');
+    const done = () => { b.setAttribute('aria-pressed', 'true'); b.textContent = '✓ Copied'; setTimeout(() => { b.setAttribute('aria-pressed', 'false'); b.textContent = '⧉ Copy prompt'; }, 1800); };
+    const fallback = () => { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); done(); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done, fallback); else fallback();
+  }));
+
+  window.W = Object.assign(window.W || {}, { onSlide: () => closePops() });
+  function closePops() {
+    document.querySelectorAll('.hbtn[data-pop]').forEach(b => { b.setAttribute('aria-expanded', 'false'); document.getElementById(b.dataset.pop).classList.remove('show'); });
+  }
+  document.querySelectorAll('.hbtn[data-pop]').forEach(b => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') === 'true';
+    closePops();
+    if (!open) { b.setAttribute('aria-expanded', 'true'); document.getElementById(b.dataset.pop).classList.add('show'); }
+  }));
+
+  (function () {
+    const prev = (window.W || {}).onSlide;
+    function run(s) {
+      s.querySelectorAll('[data-count]').forEach(el => {
+        const to = +el.dataset.count, dec = +(el.dataset.dec || 0), dl = +(el.dataset.delay || 0), dur = +(el.dataset.dur || 1400), pre = el.dataset.pre || '';
+        const fmt = v => pre + (dec ? v.toFixed(dec) : Math.round(v).toLocaleString('en-US'));
+        el.textContent = fmt(0); const t0 = performance.now() + dl;
+        (function tick(now) { const k = Math.min(1, Math.max(0, (now - t0) / dur)); el.textContent = fmt(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(tick); })(t0);
+        clearTimeout(el._t); el._t = setTimeout(() => { el.textContent = fmt(to); }, dl + dur + 80);
+      });
+    }
+    window.W = Object.assign(window.W || {}, { onSlide: (i, s) => { if (prev) prev(i, s); run(s); } });
+  })();
+
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    placeHand();
+  }
+  const W = window.W || {};
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd'), back = document.getElementById('back'), hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  const gateOf = s => s.dataset.gate ? s.querySelector(s.dataset.gate) : null;
+  const locked = s => !!s.dataset.gate && !s.classList.contains('opened');
+  // until a gate is tapped the hand points at it; otherwise it points at the forward arrow
+  function placeHand() {
+    const s = slides[current], g = locked(s) ? gateOf(s) : null;
+    hand.classList.toggle('on-gate', !!g);
+    if (g) {
+      const c = canvas.getBoundingClientRect(), r = g.getBoundingClientRect(), k = c.width / canvas.offsetWidth;
+      hand.style.left = ((r.left + r.width * 0.65 - c.left) / k) + 'px';
+      hand.style.top = ((r.top + r.height * 0.55 - c.top) / k) + 'px';
+    } else { hand.style.left = ''; hand.style.top = ''; }
+  }
+  function showFwd(delay) {
+    const s = slides[current];
+    fwd.classList.toggle('hidden', current === slides.length - 1 || locked(s));
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1 || locked(s)) handTimer = setTimeout(() => { placeHand(); hand.style.opacity = 1; }, delay != null ? delay : +(s.dataset.hand || 2600));
+  }
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    // load a clip only on its slide, and unload it when leaving so it stops playing
+    document.querySelectorAll('iframe[data-src]').forEach(f => {
+      const on = f.closest('.slide') === slides[current];
+      if (on && !f.getAttribute('src')) f.src = f.dataset.src; else if (!on && f.getAttribute('src')) f.removeAttribute('src');
+    });
+    if (W.onSlide) W.onSlide(current, slides[current]);
+    showFwd();
+  }
+  slides.forEach(s => {
+    const g = gateOf(s); if (!g) return;
+    g.addEventListener('click', () => {
+      if (s.classList.contains('opened')) return;
+      s.classList.add('opened');
+      if (W.onOpen) W.onOpen(s);
+      showFwd(+(s.dataset.after || 1600));
+    });
+  });
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { slides.forEach(s => s.classList.remove('opened')); if (W.onRestart) W.onRestart(); go(0); });
+  window.addEventListener('resize', fit);
+  // preview helper: #N opens slide N; add "open" (e.g. #4open) to show a gated slide already opened
+  const start = parseInt(location.hash.slice(1), 10);
+  const target = start >= 1 && start <= slides.length ? start - 1 : 0;
+  if (location.hash.includes('open')) { slides[target].classList.add('opened'); if (W.onOpen) W.onOpen(slides[target]); }
+  go(target);
+  fit();
+</script>
+</body>
+</html>
