@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Discussion Guide: What Good Looks Like</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #E5E0FA; --blue-200: #D3CAF6; --blue: #3E1FBC; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .page { position: absolute; inset: 0; padding: 66px 40px 24px; opacity: 0; pointer-events: none; transition: opacity .4s ease; overflow: hidden; display: flex; flex-direction: column; gap: 12px; }
+  .page.active { opacity: 1; pointer-events: auto; }
+  .page.active .auto { opacity: 1; transform: none; }
+  .menu-btn { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px 0 12px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 16px; font-weight: 700; transition: opacity .3s; }
+  .menu-btn:hover { background: var(--gray); }
+  .jump { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; font: inherit; font-size: 16px; font-weight: 800; box-shadow: 0 3px 0 var(--black); white-space: nowrap; transition: opacity .3s; }
+  .jump:hover { background: var(--black); color: var(--white); }
+  .p-menu { justify-content: center; gap: 20px; padding-bottom: 30px; }
+  .p-menu h2 { font-size: 52px; line-height: 1; }
+  .picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .pick { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; text-align: left; padding: 18px; border-radius: 22px; border: 3px solid var(--black); background: var(--white); cursor: pointer; font: inherit; color: inherit; min-height: 190px; box-shadow: 7px 7px 0 var(--gray); transition: transform .15s, box-shadow .15s; }
+  .pick:hover { transform: translate(-2px,-2px); box-shadow: 9px 9px 0 var(--black); }
+  .pick.good { background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); }
+  .pick .ico { width: 58px; height: 58px; border-radius: 16px; border: 2.5px solid var(--black); background: var(--white); display: flex; align-items: center; justify-content: center; font-size: 30px; }
+  .pick .name { font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.05; }
+  .pick .seen { position: absolute; top: -14px; right: -14px; width: 42px; height: 42px; border-radius: 50%; background: var(--blue); color: var(--white); border: 3px solid var(--black); display: flex; align-items: center; justify-content: center; font-size: 25px; font-weight: 800; transform: scale(0); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+  .pick.visited .seen { transform: scale(1); }
+  .pick .hand { right: 8px; bottom: -14px; }
+  .page.active .pick.next .hand { opacity: 1; transition: opacity .4s ease 1.2s; }
+  .note { font-size: 25px; line-height: 1.4; padding: 10px 14px; border-radius: 12px; background: var(--blue-50); border: 2px solid var(--blue-200); }
+  .phead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .phead h2 { font-size: 32px; line-height: 1.05; margin-right: 4px; }
+  .score { display: inline-flex; padding: 3px 11px; border-radius: 999px; border: 2.5px solid var(--black); font-size: 25px; font-weight: 800; background: var(--white); }
+  .good .score { background: var(--blue-50); }
+  .stabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .stab { font: inherit; font-size: 16px; font-weight: 700; padding: 6px 13px; border-radius: 999px; border: 2px solid var(--black); background: var(--white); cursor: pointer; }
+  .stab[aria-selected="true"] { background: var(--black); color: var(--white); }
+  .stab.seen:not([aria-selected="true"]) { background: var(--blue-50); }
+  .stabs .sub { font-size: 25px; font-weight: 800; color: var(--blue); margin-left: 4px; }
+  .parts { position: relative; flex: 1; min-height: 0; }
+  .part { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .part.on { opacity: 1; pointer-events: auto; }
+  .part .lbl { font-size: 25px; font-weight: 800; color: var(--blue); }
+  .crit-q { border: 3px solid var(--black); border-radius: 16px; padding: 10px 16px; box-shadow: 6px 6px 0 var(--blue-200); }
+  .crit-q .k { font-size: 25px; font-weight: 800; color: var(--blue); }
+  .crit-q p { font-family: 'DM Serif Text', serif; font-size: 28px; line-height: 1.2; margin-top: 2px; }
+  .levels { display: flex; flex-direction: column; gap: 8px; margin-right: 104px; }
+  .lvl { display: grid; grid-template-columns: 170px 1fr; border: 2.5px solid var(--black); border-radius: 14px; overflow: hidden; }
+  .lvl .lh { padding: 8px 12px; font-size: 25px; font-weight: 800; line-height: 1.15; border-right: 2px solid var(--black); display: flex; align-items: center; }
+  .lvl.l1 .lh { background: var(--blue-50); } .lvl.l2 .lh { background: var(--blue); color: var(--white); }
+  .lvl .lb { padding: 8px 14px; font-size: 25px; line-height: 1.3; }
+  .ans { border: 3px solid var(--black); border-radius: 16px; overflow: hidden; background: var(--white); margin-right: 104px; }
+  .ans .qn { display: block; padding: 8px 14px; background: var(--blue-50); border-bottom: 2px solid var(--black); font-size: 25px; font-weight: 700; line-height: 1.25; }
+  .ans .a { display: block; padding: 10px 14px; font-size: 25px; line-height: 1.36; }
+  .bad .ans .a { font-style: italic; }
+  .ann { border-radius: 14px; padding: 10px 14px; font-size: 25px; line-height: 1.36; border: 2.5px solid var(--black); background: var(--white); margin-right: 104px; }
+  .ann b.crit { display: inline-block; padding: 0 10px; border-radius: 999px; margin-right: 6px; border: 2px solid var(--black); background: var(--blue); color: var(--white); }
+  .bad .ann b.crit { background: var(--gray); color: var(--black); }
+  .oneline { font-size: 25px; line-height: 1.4; padding: 10px 14px; border-left: 6px solid var(--blue); background: var(--blue-50); margin-right: 104px; }
+
+  .page { font-size: 25px; }
+  .lvl { grid-template-columns: 124px 1fr; } .levels { gap: 3px; } .lvl .lh { padding: 2px 8px; line-height: 1.12; } .lvl .lb { padding: 2px 10px; line-height: 1.16; } .crit-q { padding: 4px 14px; } .crit-q p { line-height: 1.2; }
+  .rw { border: 3px solid var(--black); border-radius: 14px; padding: 6px 14px; margin-right: 104px; display: flex; flex-direction: column; gap: 2px; background: var(--white); }
+  .rw b { font-size: 25px; font-weight: 800; color: var(--blue); line-height: 1.2; } .rw span { font-size: 25px; line-height: 1.26; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style></head>
+<body><div class="canvas" id="canvas"><div class="topbar">
+<button class="menu-btn hidden" id="toMenu" type="button" aria-label="Back to the menu"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Menu</button>
+<div class="topright"><button class="jump hidden" id="jump" type="button"></button><button class="restart" id="restart" type="button">↺ Start over</button></div></div>
+
+  <section class="page p-menu active" id="menu" aria-live="polite">
+    <h2 class="serif auto">What Good Looks Like</h2>
+    <div class="picks auto d1">
+      <button class="pick" type="button" data-go="rubric"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">📏</span><span class="name">The rubric</span></button>
+      <button class="pick good" type="button" data-go="good"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">✅</span><span class="name">Strong example</span></button>
+      <button class="pick" type="button" data-go="bad"><span class="seen" aria-hidden="true">✓</span><svg class="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg><span class="ico" aria-hidden="true">❌</span><span class="name">Not-yet example</span></button>
+    </div>
+    <p class="note auto d2">📌 These examples are a Discussion Guide for <b>Spotify: Friday Fresh</b>, continuing the Step 1 plan example. The details and numbers are <b>made up</b> for illustration. Notice what the strong one does: <b>it asks what people noticed and what they'd do instead</b>.</p>
+  </section>
+  <section class="page" id="rubric"><div class="phead"><h2 class="serif">📏 The rubric</h2></div><div class="stabs" role="tablist"></div><div class="parts"><div class="part" data-tab="Prove wrong"><div class="crit-q"><span class="k">Questions that could prove you wrong · The test question</span><p>Could any answer make your "isn't working if" line come true?</p></div><div class="levels"><div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">No goal or "isn't working" line pasted, and no question connects to it</span></div><div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Goal and line pasted, but most questions are "nice to know", or none could make the line come true</span></div><div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">Every core question serves the goal, and at least one could make the "isn't working" line come true</span></div></div></div><div class="part" data-tab="Wording"><div class="crit-q"><span class="k">Open, neutral, plain · The test question</span><p>Would a participant answer with a story, not a yes, a no or a compliment?</p></div><div class="levels"><div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">Mostly yes/no, leading or jargon questions</span></div><div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">Mostly open, but one or two nudge, use jargon, or stack two ideas</span></div><div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">Every question is open-ended, neutral, plain English, one idea at a time</span></div></div></div><div class="part" data-tab="Script"><div class="crit-q"><span class="k">A script you can run · The test question</span><p>Could you lead the session from this page alone?</p></div><div class="levels"><div class="lvl l0"><span class="lh">0 · Not yet</span><span class="lb">Fewer than 5 or more than 7 core questions, or no follow-ups</span></div><div class="lvl l1"><span class="lh">1 · Getting there</span><span class="lb">5–7 core questions, but the "instead" question, the "Why does that matter to you?" follow-up, the intro/wrap-up or the notes are missing</span></div><div class="lvl l2"><span class="lh">2 · Strong</span><span class="lb">5–7 core questions across all three themes, 1–2 follow-ups each, the "instead" question and the "Why does that matter to you?" follow-up, intro and wrap-up questions, and a notes section</span></div></div></div></div></section>
+  <section class="page good" id="good"><div class="phead"><h2 class="serif">✅ Strong example</h2><span class="score">2 · 2 · 2</span></div><div class="stabs" role="tablist"></div><div class="parts"><div class="part" data-tab="Prove wrong"><span class="lbl">Before You Write</span><div class="rw"><b>Goal</b><span>To find out whether listeners notice the new songs in their Friday mix without being told, and whether they'd keep playing instead of switching to something else.</span></div><div class="rw"><b>My feature isn't working if</b><span>most participants can't tell what changed in their Friday mix, or say they'd skip the new songs and turn it off.</span></div></div><div class="part" data-tab="Prove wrong"><span class="lbl">Before You Write</span><div class="rw"><b>Learning goals</b><span>do they notice the new songs, and do they keep playing?</span></div><div class="rw"><b>Part of the flow</b><span>the Friday mix screen</span></div><div class="rw"><b>Most useful feedback</b><span>what they notice first, and what makes them skip.</span></div></div><div class="part" data-tab="Wording"><span class="lbl">Header · Warm-Up · Interest (6 mins)</span><div class="rw"><b>Header</b><span>Friday Fresh · 37 minutes · [Your Name] · [date]</span></div><div class="rw"><b>Warm-Up (5 mins)</b><span>"What do you usually put on when you study or work?" · "When do you skip a song?"</span></div><div class="rw"><b>Interest 1 · 2</b><span>"What's your first impression of your Friday mix?" (→ "What stands out to you?") · "Would you want to try Friday Fresh if it launched on Spotify?" (→ "Why or why not?")</span></div></div><div class="part" data-tab="Wording"><span class="lbl">Usability (11 mins)</span><div class="rw"><b>1 ✓</b><span>"Walk me through what you saw when you opened your Friday mix." → "What do you think the 'New this Friday' labels mean?"</span></div><div class="rw"><b>2</b><span>"How would you turn Friday Fresh off if you wanted to?" → "How easy or difficult did that feel?"</span></div></div><div class="part" data-tab="Script"><span class="lbl">Value & Impact (11 mins)</span><div class="rw"><b>1 ⭐ ✓</b><span>"How would this change what you put on during a Friday study session, if at all?" → "Why does that matter to you?"</span></div><div class="rw"><b>2</b><span>"How does a mix with new songs feel compared to the one you have now?" → "Can you tell me more about that?"</span></div></div><div class="part" data-tab="Script"><span class="lbl">Value & Impact (continued)</span><div class="rw"><b>Instead ✓</b><span>"What would you put on instead if Friday Fresh didn't exist?" → "How does that compare to what you do now?"</span></div></div><div class="part" data-tab="Script"><span class="lbl">Wrap-Up (4 mins) · Notes</span><div class="rw"><b>Wrap-Up</b><span>"If you could change one thing about Friday Fresh, what would it be?" · "Would you want Spotify to launch it?"</span></div><div class="rw"><b>Notes</b><span>the four "What you see → What it may mean" rows, with a column for the screen or question; a Direct quotes box.</span></div></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">Questions that could prove you wrong: 2</b> Every question serves the goal, and three could make the "isn't working" line come true: walking through the Friday mix shows whether they notice the change, and the ⭐ and "instead" questions show whether they'd keep playing.</div><div class="ann"><b class="crit">Open, neutral, plain: 2</b> Every question invites a story ("Walk me through…", "How would this change…"), nothing nudges, and there's no jargon.</div></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">A script you can run: 2</b> Seven core questions (2 · 2 · 3) in 37 minutes, a follow-up on each, the "instead" question, "Why does that matter to you?" after the ⭐ question, warm-up, wrap-up and notes.</div><p class="oneline"><b>Why it works:</b> it asks what people noticed and what they'd do instead.</p></div></div></section>
+  <section class="page bad" id="bad"><div class="phead"><h2 class="serif">❌ Not-yet example</h2><span class="score">1 · 0 · 0</span></div><div class="stabs" role="tablist"></div><div class="parts"><div class="part" data-tab="Prove wrong"><span class="lbl">Before You Write</span><div class="rw"><b>Goal and line</b><span>pasted from the plan</span></div><div class="rw"><b>The three questions</b><span>(blank)</span></div></div><div class="part" data-tab="Wording"><span class="lbl">Interest (20 mins)</span><div class="rw"><b>1–4</b><span>"Do you like the new songs?" · "Wouldn't fresh songs every Friday make Spotify more fun?" · "What's your favorite part of the design?" · "Would you pay for this?"</span></div></div><div class="part" data-tab="Wording"><span class="lbl">Usability (15 mins) · Value & Impact (20 mins)</span><div class="rw"><b>Usability</b><span>"Is the label clear, and would you use it daily and share it with friends?" · "Did you find the toggle?"</span></div><div class="rw"><b>Value & Impact</b><span>"Does the refresh drive engagement for you?" · "Do you use Daily Mix?" · "Is it better than Apple Music?"</span></div></div><div class="part" data-tab="Script"><span class="lbl">Missing</span><div class="rw"><b>Not there</b><span>No follow-ups, no "instead" question, no warm-up or wrap-up, no notes. 9 questions, 55 minutes.</span></div></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">Questions that could prove you wrong: 1</b> The goal and line are there, but no question checks whether people notice the new songs unprompted, and "Would you pay for this?" and "Do you use Daily Mix?" are nice to know.</div><div class="ann"><b class="crit">Open, neutral, plain: 0</b> Mostly yes/no ("Do you like…?", "Did you find…?"), leading ("Wouldn't… make Spotify more fun?", "favorite part"), jargon ("drive engagement"), and one question stacks three ideas.</div></div><div class="part" data-tab="Scores"><span class="lbl">How it scores</span><div class="ann"><b class="crit">A script you can run: 0</b> Nine core questions in 55 minutes, no follow-ups, no "instead" question, no "Why does that matter to you?", no warm-up, wrap-up or notes.</div><p class="oneline"><b>The difference in one line:</b> the strong guide asks what people noticed and what they'd do instead; the not-yet one asks them to agree with you.</p></div></div></section>
+
+<button class="fwd hidden" id="fwd" type="button" aria-label="Next part"><svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+</div><script>
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+  }
+  fit();
+  const pages = [...document.querySelectorAll('.page')];
+  const picks = [...document.querySelectorAll('.pick')];
+  const toMenu = document.getElementById('toMenu'), jump = document.getElementById('jump'), fwd = document.getElementById('fwd');
+  const visited = new Set();
+  const JUMPS = { rubric: ['good', 'See the strong example →'], good: ['bad', 'See the not-yet example →'], bad: ['good', '← See the strong example'] };
+  // each page is a series of parts; parts that share a label share one tab and are stepped with the arrow
+  const series = {};
+  ['rubric', 'good', 'bad'].forEach(id => {
+    const page = document.getElementById(id);
+    const parts = [...page.querySelectorAll('.part')];
+    const tabs = page.querySelector('.stabs');
+    const labels = [...new Set(parts.map(p => p.dataset.tab))];
+    tabs.innerHTML = labels.map(l => `<button class="stab" type="button" role="tab" data-l="${l}">${l}</button>`).join('') + '<span class="sub" aria-live="polite"></span>';
+    const btns = [...tabs.querySelectorAll('.stab')];
+    series[id] = { parts, btns, sub: tabs.querySelector('.sub'), i: 0 };
+    btns.forEach(b => b.addEventListener('click', () => showPart(id, parts.findIndex(p => p.dataset.tab === b.dataset.l))));
+  });
+  function showPart(id, i) {
+    const s = series[id];
+    s.i = i;
+    s.parts.forEach((p, k) => p.classList.toggle('on', k === i));
+    const label = s.parts[i].dataset.tab, group = s.parts.filter(p => p.dataset.tab === label);
+    s.btns.forEach(b => { const on = b.dataset.l === label; b.setAttribute('aria-selected', on ? 'true' : 'false'); if (on) b.classList.add('seen'); });
+    s.sub.textContent = group.length > 1 ? `${group.indexOf(s.parts[i]) + 1} of ${group.length}` : '';
+    fwd.classList.toggle('hidden', i === s.parts.length - 1);
+  }
+  function markNext() {
+    const next = picks.find(p => !visited.has(p.dataset.go));
+    picks.forEach(p => p.classList.toggle('next', p === next));
+  }
+  let currentId = 'menu';
+  function show(id) {
+    currentId = id;
+    pages.forEach(p => p.classList.toggle('active', p.id === id));
+    toMenu.classList.toggle('hidden', id === 'menu');
+    jump.classList.toggle('hidden', !JUMPS[id]);
+    if (JUMPS[id]) { jump.dataset.go = JUMPS[id][0]; jump.textContent = JUMPS[id][1]; }
+    if (series[id]) showPart(id, 0); else fwd.classList.add('hidden');
+    if (id !== 'menu') { visited.add(id); picks.forEach(p => p.classList.toggle('visited', visited.has(p.dataset.go))); }
+    markNext();
+  }
+  picks.forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+  jump.addEventListener('click', () => show(jump.dataset.go));
+  toMenu.addEventListener('click', () => show('menu'));
+  fwd.addEventListener('click', () => { const s = series[currentId]; if (s && s.i < s.parts.length - 1) showPart(currentId, s.i + 1); });
+  document.getElementById('restart').addEventListener('click', () => {
+    visited.clear(); picks.forEach(p => p.classList.remove('visited'));
+    Object.values(series).forEach(s => s.btns.forEach(b => b.classList.remove('seen')));
+    show('menu');
+  });
+  window.addEventListener('resize', fit);
+  // preview helper: #rubric, #good, #bad; add -N to open part N (e.g. #good-3)
+  const m = location.hash.slice(1).match(/^(rubric|good|bad)(?:-(\d))?$/);
+  show(m ? m[1] : 'menu');
+  if (m && m[2] && series[m[1]]) showPart(m[1], parseInt(m[2], 10) - 1);
+</script></body></html>
