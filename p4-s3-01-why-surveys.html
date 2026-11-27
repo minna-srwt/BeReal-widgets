@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why Surveys</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Inter:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root { --black: #000000; --white: #FFFFFF; --gray: #E4E4E4; --soft: #F4F4F4; --blue-50: #E5E0FA; --blue-200: #D3CAF6; --blue: #3E1FBC; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--white); }
+  body { font-family: 'Inter', sans-serif; color: var(--black); }
+  .serif { font-family: 'DM Serif Text', serif; font-weight: 400; }
+  /* Canvas is designed at 600px tall; its width stretches to fill the embed (set by the script) */
+  .canvas { position: absolute; top: 0; left: 0; width: 800px; height: 600px; transform-origin: top left; background: var(--white); overflow: hidden; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; z-index: 6; }
+  .topleft, .topright { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--white); border: 1.5px solid var(--black); transition: all .3s; }
+  .dot.done { background: var(--gray); }
+  .dot.now { background: var(--black); transform: scale(1.3); }
+  .restart { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; background: var(--white); border: 1.5px solid var(--black); color: var(--black); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .restart:hover { background: var(--gray); }
+  .slide { position: absolute; inset: 0; padding: 70px 40px 30px; opacity: 0; pointer-events: none; transition: opacity .45s ease; overflow: hidden; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .auto { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .auto { opacity: 1; transform: none; }
+  .d1 { transition-delay: .4s !important; } .d2 { transition-delay: .9s !important; } .d3 { transition-delay: 1.4s !important; } .d4 { transition-delay: 1.9s !important; } .d5 { transition-delay: 2.4s !important; }
+  a { color: var(--black); text-decoration: underline; text-decoration-color: var(--blue); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  a:hover { color: var(--blue); }
+  p, li { font-size: 25px; line-height: 1.42; }
+  .pad { margin-right: 104px; }
+  .kick { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .stmt { font-family: 'DM Serif Text', serif; font-size: 40px; line-height: 1.15; }
+  .stmt b, .hl { font-weight: 400; color: var(--blue); }
+  .fwd { position: absolute; right: 30px; bottom: 28px; width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); cursor: pointer; z-index: 7; display: flex; align-items: center; justify-content: center; animation: bob 1.4s ease-in-out infinite; box-shadow: 0 6px 0 var(--black); transition: opacity .3s; }
+  .fwd:hover { background: var(--black); }
+  @keyframes bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(9px); } }
+  .back { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--black); background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  .back:hover { background: var(--gray); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+  .hand { position: absolute; width: 62px; height: 68px; z-index: 8; pointer-events: none; animation: tap 1.4s ease-in-out infinite; transition: opacity .3s; opacity: 0; right: 22px; bottom: 6px; }
+  .hand.on-gate { right: auto; bottom: auto; }
+  @keyframes tap { 0%,100% { transform: translate(0,0) rotate(-12deg); } 50% { transform: translate(-6px,-10px) rotate(-12deg); } }
+  /* video slides: the clip takes most of the slide */
+  .vslide { display: flex; flex-direction: column; gap: 14px; padding-bottom: 26px; }
+  .vwrap { flex: 1; min-height: 0; display: flex; justify-content: center; padding-right: 104px; }
+  .video { height: 100%; max-width: 100%; aspect-ratio: 16 / 9; border: 4px solid var(--black); border-radius: 18px; overflow: hidden; background: var(--blue-50); box-shadow: 8px 8px 0 var(--blue); }
+  .video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* a big statement that slams in */
+  .slam { opacity: 0; transform: scale(1.14); transition: opacity .45s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+  .slide.active .slam { opacity: 1; transform: none; }
+  /* a heading that moved inside a widget, shown as a dropped title card */
+  .title-card { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 36px; line-height: 1.1; padding: 12px 22px; border: 3px solid var(--black); border-radius: 14px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); opacity: 0; transform: translateY(-70px) rotate(-3deg); transition: opacity .3s ease .15s, transform .6s cubic-bezier(.3,1.5,.5,1) .15s; }
+  .slide.active .title-card { opacity: 1; transform: rotate(-1deg); }
+  @keyframes popin { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-3px); } 75% { transform: translate(-3px,2px); } }
+
+  .col { display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px; }
+  .sh { display: flex; align-items: center; gap: 14px; }
+  .sh .n { flex: none; min-width: 56px; height: 56px; padding: 0 8px; border-radius: 14px; border: 3px solid var(--black); background: var(--white); box-shadow: 4px 4px 0 var(--blue-200); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 32px; }
+  .sh h3 { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 34px; line-height: 1.1; }
+  .spacer { flex: 1; }
+  .callout { border: 3px solid var(--black); border-radius: 18px; padding: 14px 18px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); }
+  .vs { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--black); background: var(--blue); color: var(--white); font-family: 'DM Serif Text', serif; font-size: 25px; flex: none; }
+  .lab { font-size: 25px; font-weight: 700; line-height: 1.2; text-align: center; }
+  .pop-in { opacity: 0; transform: scale(.4); }
+  .slide.active .pop-in { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  @keyframes popin2 { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+
+  .help { position: relative; display: flex; gap: 12px; padding-right: 110px; }
+  .hbtn { font: inherit; font-size: 16px; font-weight: 700; padding: 9px 16px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--white); cursor: pointer; }
+  .hbtn[aria-expanded="true"] { background: var(--black); color: var(--white); }
+  .pop { position: absolute; left: 0; right: 110px; bottom: calc(100% + 10px); display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--white); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .25s, transform .25s; box-shadow: 0 8px 24px rgba(0,0,0,.15); z-index: 4; }
+  .pop.check { border: 3px solid var(--black); } .pop.stuck { border: 3px dashed var(--black); }
+  .pop.show { opacity: 1; transform: none; pointer-events: auto; }
+
+  .slide, .page { font-size: 25px; line-height: 1.42; }
+  .tplbtn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: var(--white); border: 2.5px solid var(--black); color: var(--black); font-size: 16px; font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--blue); white-space: nowrap; }
+  .tplbtn:hover { background: var(--black); color: var(--white); }
+  .tplbtn:hover svg path, .tplbtn:hover svg line { stroke: var(--white); }
+  .s1 { display: flex; flex-direction: column; justify-content: center; gap: 16px; padding-bottom: 30px; }
+  .art { display: flex; justify-content: center; align-items: center; margin-right: 104px; }
+  .art svg { max-height: 150px; width: auto; max-width: 100%; }
+  .check { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 16px; border: 3px solid var(--black); border-radius: 14px; font-size: 25px; line-height: 1.38; background: var(--blue-50); }
+  .where { align-self: flex-start; font-size: 25px; font-weight: 700; padding: 4px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--blue-50); color: var(--blue); }
+  .bul { display: flex; flex-direction: column; gap: 8px; margin-right: 104px; }
+  .bul li { list-style: none; position: relative; padding-left: 34px; line-height: 1.32; }
+  .bul li::before { content: ''; position: absolute; left: 6px; top: 12px; width: 13px; height: 13px; border-radius: 4px; background: var(--blue); border: 2px solid var(--black); }
+  .quote { border-left: 8px solid var(--blue); padding: 6px 0 6px 20px; margin-right: 104px; font-family: 'DM Serif Text', serif; font-size: 34px; line-height: 1.2; }
+  .attr { font-size: 25px; margin-right: 104px; }
+  .tabs3 { display: flex; flex-wrap: wrap; gap: 10px; margin-right: 104px; }
+  .tab3 { font: inherit; font-size: 25px; font-weight: 800; padding: 6px 16px; border-radius: 999px; border: 3px solid var(--black); background: var(--white); cursor: pointer; }
+  .tab3[aria-selected="true"] { background: var(--blue); color: var(--white); }
+  .pane3 { display: none; } .pane3.on { display: flex; }
+  .card3 { flex-direction: column; gap: 10px; border: 3px solid var(--black); border-radius: 18px; padding: 12px 16px; background: var(--blue-50); box-shadow: 7px 7px 0 var(--blue); margin-right: 104px; }
+  .fld b { display: block; font-size: 25px; font-weight: 800; color: var(--blue); line-height: 1.2; }
+  .fld span { line-height: 1.32; }
+  .bubble { border: 3px solid var(--black); border-radius: 18px 18px 18px 4px; padding: 12px 16px; background: var(--blue-50); font-style: italic; font-size: 25px; line-height: 1.4; margin-right: 104px; }
+  .copy[aria-pressed="true"] { background: var(--blue); color: var(--white); }
+  .copyrow { display: flex; gap: 12px; align-items: center; }
+  .tb { border-collapse: separate; border-spacing: 0; margin-right: 104px; width: calc(100% - 104px); }
+  .tb th, .tb td { border: 2.5px solid var(--black); padding: 8px 10px; font-size: 25px; line-height: 1.25; text-align: left; vertical-align: top; }
+  .tb th { background: var(--blue-50); } .tb th.new { background: var(--blue); color: var(--white); }
+  .ppl { display: flex; justify-content: center; gap: 22px; margin-right: 104px; }
+  .ppl svg { height: 150px; width: auto; }
+  .ppl .bub { opacity: 0; transform: scale(.3); transform-origin: 50% 80%; }
+  .slide.active .ppl .bub { animation: popin2 .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .slide.active .ppl .pp:nth-child(1) .bub { animation-delay: .5s; } .slide.active .ppl .pp:nth-child(2) .bub { animation-delay: .8s; } .slide.active .ppl .pp:nth-child(3) .bub { animation-delay: 1.1s; } .slide.active .ppl .pp:nth-child(4) .bub { animation-delay: 2.4s; }
+  .ai-line { font-size: 25px; line-height: 1.38; margin-right: 104px; }
+
+  .op { display: flex; gap: 22px; padding-bottom: 30px; }
+  .op.top { flex-direction: column; justify-content: center; }
+  .op.bottom { flex-direction: column-reverse; justify-content: center; }
+  .op.left { flex-direction: row-reverse; align-items: center; }
+  .op.right { flex-direction: row; align-items: center; }
+  .op.center { flex-direction: column; justify-content: center; align-items: center; }
+  .op .txt { display: flex; flex-direction: column; gap: 16px; }
+  .op.left .txt, .op.right .txt { flex: 1; min-width: 0; }
+  .op.top .txt, .op.bottom .txt { margin-right: 104px; }
+  .op .stmt { font-size: 44px; line-height: 1.14; }
+  .op .stmt.long { font-size: 38px; }
+  .scene { position: relative; flex: none; }
+  .op.top .scene, .op.bottom .scene { align-self: center; margin-right: 104px; }
+  .hookrest { margin-right: 0; }
+  .u { position: absolute; }
+  @keyframes p_pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: scale(1); } }
+  @keyframes p_up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+  @keyframes p_fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes p_draw { to { stroke-dashoffset: 0; } }
+  @keyframes p_bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes p_stamp { 0% { opacity: 0; transform: scale(2.4) rotate(-14deg); } 60% { opacity: 1; transform: scale(.9) rotate(-6deg); } 100% { opacity: 1; transform: scale(1) rotate(-6deg); } }
+  @keyframes p_shake { 0%,100% { transform: translate(0,0) rotate(0); } 20% { transform: translate(-5px,2px) rotate(-3deg); } 40% { transform: translate(5px,-2px) rotate(3deg); } 60% { transform: translate(-4px,1px) rotate(-2deg); } 80% { transform: translate(3px,-1px) rotate(2deg); } }
+
+  .sl { padding: 66px 40px 26px; }
+  .q-col { display: flex; flex-direction: column; gap: 12px; }
+  .q-col p { line-height: 1.36; }
+  .q-pad { margin-right: 104px; }
+  .q-chip { align-self: flex-start; font-family: 'DM Serif Text', serif; font-size: 30px; line-height: 1.1; padding: 8px 18px; border: 3px solid var(--black); border-radius: 12px; background: var(--blue-50); box-shadow: 6px 6px 0 var(--blue); opacity: 0; transform: translateY(-50px) rotate(-3deg); transition: opacity .3s ease .1s, transform .55s cubic-bezier(.3,1.5,.5,1) .1s; }
+  .slide.active .q-chip { opacity: 1; transform: rotate(-1deg); }
+  .q-tag { align-self: flex-start; font-size: 25px; font-weight: 700; padding: 3px 14px; border-radius: 999px; border: 2.5px solid var(--black); background: var(--blue-50); color: var(--blue); }
+  .q-grid { display: grid; gap: 20px; align-items: center; }
+  .q-qt { border-left: 8px solid var(--blue); padding: 2px 0 2px 16px; font-family: 'DM Serif Text', serif; font-size: 32px; line-height: 1.18; }
+  .q-qt b { color: var(--blue); font-weight: 400; }
+  .q-tick { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: start; }
+  .q-tick .ic { font-size: 30px; line-height: 1.15; opacity: 0; } .slide.active .q-tick .ic { animation: p_stamp .4s ease forwards; }
+  .q-tick span:last-child { line-height: 1.3; }
+  .q-strike { position: relative; display: inline-block; }
+  .q-strike::after { content: ''; position: absolute; left: -4px; right: -4px; top: 52%; height: 5px; background: var(--black); transform: scaleX(0); transform-origin: left; }
+  .slide.active .q-strike::after { animation: q_strike .4s ease forwards; animation-delay: inherit; }
+  @keyframes q_strike { to { transform: scaleX(1); } }
+  .q-bub { border: 3px solid var(--black); border-radius: 18px 18px 18px 4px; padding: 6px 14px; background: var(--white); line-height: 1.25; }
+  .q-bub.v { background: var(--blue-50); }
+  .q-k { font-size: 25px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--blue); }
+  @keyframes q_on { to { opacity: 1; } } @keyframes q_off { to { opacity: 0; } }
+  .slide.tt { gap: 6px !important; padding-top: 62px !important; padding-bottom: 14px !important; } .tt p, .tt li { line-height: 1.3; } .tt .bul { gap: 2px; }
+  @keyframes q_pulse { 0% { box-shadow: 0 0 0 0 rgba(62,31,188,.55); } 100% { box-shadow: 0 0 0 26px rgba(62,31,188,0); } }
+
+  .v-n { display: flex; align-items: center; gap: 8px; margin-right: 104px; }
+  .v-n span { flex: none; min-width: 44px; height: 44px; padding: 0 6px; border: 3px dashed var(--black); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Text', serif; font-size: 28px; color: #777; }
+  .v-n span.on { border-style: solid; background: var(--blue); color: var(--white); box-shadow: 4px 4px 0 var(--blue-200); }
+  .v-n b { min-width: 0; margin-left: 8px; font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 28px; line-height: 1.1; }
+  .x-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-right: 104px; }
+  .x-acts span { font-size: 25px; font-weight: 800; padding: 2px 14px; border: 3px solid var(--black); border-radius: 12px; background: var(--blue-50); box-shadow: 5px 5px 0 var(--blue); line-height: 1.15; }
+  .x-acts span.nx { background: var(--white); border-style: dashed; box-shadow: none; color: #555; font-weight: 600; }
+
+  .x1o { padding: 0; }
+  .x1o .stg { position: absolute; inset: 60px 0 0 0; padding: 8px 40px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .x1o .stmt { font-size: 32px; line-height: 1.16; margin-right: 104px; }
+  .x1-sc { position: relative; width: 640px; height: 230px; align-self: center; flex: none; }
+  .x1-p { position: absolute; top: 40px; width: 110px; height: 180px; }
+  .x1-p .hd { position: absolute; left: 18px; bottom: 6px; }
+  .slide.active .x1-p .hd { animation: x1_spread .6s ease 2.2s forwards; }
+  @keyframes x1_spread { to { transform: translateX(-6px); } }
+  .x1-p .bb { position: absolute; left: 22px; top: 0; width: 66px; height: 44px; border: 3px solid var(--black); border-radius: 16px 16px 16px 4px; background: var(--white); opacity: 0; }
+  .slide.active .x1-p .bb { animation: x1_say .4s ease forwards, x1_merge .7s ease-in 1.2s forwards; }
+  @keyframes x1_say { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: none; } }
+  @keyframes x1_merge { from { opacity: 1; } to { opacity: 0; transform: translate(var(--mx, 0), -10px) scale(.4); } }
+  .x1-p:nth-child(2) .bb { --mx: 248px; } .x1-p:nth-child(3) .bb { --mx: 124px; } .x1-p:nth-child(5) .bb { --mx: -124px; } .x1-p:nth-child(6) .bb { --mx: -248px; }
+  .x1-big { position: absolute; left: 230px; top: 0; width: 180px; height: 70px; border: 4px solid var(--black); border-radius: 30px 30px 30px 6px; background: var(--gray); opacity: 0; display: flex; align-items: center; justify-content: center; font-size: 34px; }
+  .slide.active .x1-big { animation: x1_loud .9s ease 1.6s forwards; }
+  @keyframes x1_loud { 0% { opacity: 0; transform: scale(.4); } 30% { opacity: 1; transform: scale(1.15); } 70% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.6); } }
+  .x1-p .bx { position: absolute; inset: 40px 0 0 0; border: 4px solid var(--black); border-radius: 12px; background: var(--blue-50); opacity: 0; }
+  .slide.active .x1-p .bx { animation: p_pop .4s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .x1-p .mt { position: absolute; right: 8px; top: 52px; bottom: 10px; width: 16px; border: 3px solid var(--black); border-radius: 8px; background: var(--white); overflow: hidden; opacity: 0; }
+  .slide.active .x1-p .mt { animation: q_on .2s ease 2.6s forwards; }
+  .x1-p .mt i { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: var(--blue); }
+  .slide.active .x1-p .mt i { animation: x1_fill .7s cubic-bezier(.3,1.4,.5,1) forwards; }
+  @keyframes x1_fill { to { height: var(--h); } }
+
+  .x1-two { display: grid; grid-template-columns: 1fr 190px; gap: 16px; align-items: center; }
+  .x1-dots { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .x1-dots .ds { display: flex; gap: 6px; } .x1-dots .ds i { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--black); background: var(--white); }
+  .slide.active .x1-dots .ds i.y { animation: x1_lit .3s ease forwards; } @keyframes x1_lit { to { background: var(--blue); } }
+  .x1-dots b { font-family: 'DM Serif Text', serif; font-weight: 400; font-size: 44px; color: var(--blue); opacity: 0; } .slide.active .x1-dots b { animation: p_stamp .4s ease 2.6s forwards; }
+  .x1-dots span { font-size: 25px; opacity: 0; } .slide.active .x1-dots span { animation: q_on .4s ease 3s forwards; }
+  .x1-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin-right: 104px; }
+  .x1-4 div { border: 3px solid var(--black); border-radius: 14px; padding: 4px 12px; background: var(--white); line-height: 1.24; opacity: 0; }
+  .slide.active .x1-4 div { animation: p_pop .4s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .x1-flip { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-right: 104px; }
+  .x1-flip .old { font-size: 30px; font-style: italic; border: 3px solid var(--black); border-radius: 14px; padding: 4px 16px; background: var(--gray); }
+  .x1-flip .new { font-family: 'DM Serif Text', serif; font-size: 38px; color: var(--blue); border: 4px solid var(--black); border-radius: 16px; padding: 6px 20px; background: var(--white); box-shadow: 7px 7px 0 var(--blue); text-align: center; opacity: 0; }
+  .slide.active .x1-flip .new { animation: p_pop .5s cubic-bezier(.3,1.6,.5,1) 2.4s forwards; }
+  .x1-al { display: grid; grid-template-columns: 1fr 4px 1fr; gap: 16px; border: 3px solid var(--black); border-radius: 16px; padding: 6px 16px; margin-right: 104px; background: var(--white); }
+  .x1-al > i { background: var(--black); }
+  .x1-al .c { display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1.15; gap: 2px; }
+  .x1-al h4 { font-size: 25px; font-weight: 800; } .x1-al .q { font-size: 28px; } .x1-al .q.v { color: var(--blue); font-weight: 800; }
+  .x1-al svg { height: 44px; width: auto; } .x1-al path { stroke-dasharray: 200; stroke-dashoffset: 200; } .slide.active .x1-al path { animation: p_draw 1s ease 1.2s forwards; }
+  .x1-al .ft { grid-column: 1 / -1; text-align: center; font-weight: 800; } .x1-al .ft b { color: var(--blue); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; transition-delay: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="topleft">
+      <button class="back hidden" id="back" type="button" aria-label="Previous slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+    <div class="topright">
+      <button class="restart" id="restart" type="button">↺ Start over</button>
+    </div>
+  </div>
+<section class="slide x1o active" data-hand="4600"><div class="stg"><div class="x-acts"><span class="on">Why this module matters</span><span class="nx">What makes a good survey</span></div><p class="stmt slam">After your discussion, you'll want to know not just <i>what people said</i>, but <i>how strongly</i> each person feels, on their own, away from the group.</p><div class="x1-sc" aria-hidden="true"><span class="x1-big">💬</span><div class="x1-p" style="left:20px"><span class="bx" style="animation-delay:2.30s"></span><span class="bb" style="animation-delay:0.30s"></span><span class="hd"><svg class="" viewBox="0 0 60 80" style="height:74px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg></span><span class="mt"><i style="--h:80%;animation-delay:2.80s"></i></span></div><div class="x1-p" style="left:144px"><span class="bx" style="animation-delay:2.38s"></span><span class="bb" style="animation-delay:0.45s"></span><span class="hd"><svg class="" viewBox="0 0 60 80" style="height:74px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg></span><span class="mt"><i style="--h:30%;animation-delay:2.98s"></i></span></div><div class="x1-p" style="left:268px"><span class="bx" style="animation-delay:2.46s"></span><span class="bb" style="animation-delay:0.60s"></span><span class="hd"><svg class="" viewBox="0 0 60 80" style="height:74px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg></span><span class="mt"><i style="--h:60%;animation-delay:3.16s"></i></span></div><div class="x1-p" style="left:392px"><span class="bx" style="animation-delay:2.54s"></span><span class="bb" style="animation-delay:0.75s"></span><span class="hd"><svg class="" viewBox="0 0 60 80" style="height:74px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg></span><span class="mt"><i style="--h:20%;animation-delay:3.34s"></i></span></div><div class="x1-p" style="left:516px"><span class="bx" style="animation-delay:2.62s"></span><span class="bb" style="animation-delay:0.90s"></span><span class="hd"><svg class="" viewBox="0 0 60 80" style="height:74px;width:auto" aria-hidden="true"><circle cx="30" cy="20" r="14" fill="#FFF" stroke="#000" stroke-width="4"/><path d="M6 78 q0-30 24-30 q24 0 24 30 z" fill="#FFF" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg></span><span class="mt"><i style="--h:90%;animation-delay:3.52s"></i></span></div></div></div></section><section class="slide sl tt" data-hand="3800"><div class="x1-two" style="height:100%"><div class="q-col"><p class="auto">That's where <b>surveys</b> come in. They gather <b>structured feedback</b> you can compare and count. A good survey adds to your focus group by:</p><div class="q-col" style="gap:2px"><div class="q-tick auto" style="transition-delay:0.50s"><span class="ic" style="animation-delay:0.50s">✅</span><span>Putting numbers on how people feel (interest, clarity, satisfaction)</span></div><div class="q-tick auto" style="transition-delay:0.80s"><span class="ic" style="animation-delay:0.80s">✅</span><span>Checking the themes you noticed in discussion</span></div><div class="q-tick auto" style="transition-delay:1.10s"><span class="ic" style="animation-delay:1.10s">✅</span><span>Showing which views are shared and which belong to one person</span></div></div><p class="auto" style="transition-delay:1.6s">One honest note: with 5–10 participants, your numbers are small. "80% would use it weekly" might mean 4 out of 5 people. That's still useful: it shows whether the room's feeling holds up person by person. Just don't present it as proof.</p></div><div class="x1-dots" aria-hidden="true"><div class="ds"><i class="y" style="animation-delay:1.4s"></i><i class="y" style="animation-delay:1.6s"></i><i class="y" style="animation-delay:1.8s"></i><i class="y" style="animation-delay:2.0s"></i><i class="" style="animation-delay:2.2s"></i></div><b>80%</b><span>4 out of 5</span></div></div></section><section class="slide sl q-col" data-hand="3400"><span class="q-chip">What makes a good survey</span><p class="auto d1 q-pad">A strong survey is:</p><div class="x1-4"><div style="animation-delay:0.80s"><b>Short:</b> under 10 questions (under 5 minutes to complete)</div><div style="animation-delay:1.15s"><b>Clear:</b> one idea per question</div><div style="animation-delay:1.50s"><b>Balanced:</b> a mix of scale, yes/no, and open-ended questions</div><div style="animation-delay:1.85s"><b>Neutral:</b> no leading or emotionally loaded wording</div></div><p class="auto q-pad" style="transition-delay:2.4s">And the exact <b>wording</b> matters more than most people think. Sean Ellis's famous question was born from a wording problem.</p></section><section class="slide sl q-col" data-hand="3600"><p class="auto q-pad">His first users at Xobni were senior managers. When he asked <i>"How satisfied are you with this product?"</i>, he got lukewarm answers every time, because, as he put it, senior managers are never satisfied.</p><p class="auto d2 q-pad">So he flipped the question around:</p><div class="x1-flip"><span class="old" aria-hidden="true"><span class="q-strike" style="animation-delay:1.8s">"How satisfied are you with this product?"</span></span><p class="new"><i><b>"How would you feel if you could no longer use this product?"</b></i></p></div></section>
+  <section class="slide vslide">
+    <p class="auto">So he flipped the question around:</p>
+    <div class="vwrap auto d1"><div class="video"><iframe data-src="https://www.youtube.com/embed/VjJ6xcv7e8s?start=1719&amp;end=1794" title="Sean Ellis on flipping the question" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></div>
+  </section>
+<section class="slide sl q-col tt" data-hand="3600"><p class="auto q-pad">Suddenly the answers got honest. People who'd shrug at "satisfied" knew exactly how they'd feel about <i>losing</i> something. He tried the same question at Dropbox, then at every company after. It became the question thousands of startups now use.</p><div class="x1-al auto d2"><div class="c"><h4>Asked like this</h4><span class="q">How satisfied are you?</span><svg viewBox="0 0 80 40"><path d="M6 6 V34 H76 M10 22 H70" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg><span>Lukewarm answers.</span></div><i></i><div class="c"><h4>Asked like this</h4><span class="q v">How would you feel if you could no longer use it?</span><svg viewBox="0 0 80 40"><path d="M4 30 L18 14 L28 34 L40 6 L52 30 L62 12 L76 24" fill="none" stroke="#3E1FBC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Honest answers.</span></div><p class="ft">Same people. Same product. <b>Different wording.</b></p></div><p class="auto q-pad" style="transition-delay:2.6s">You'll design yours with a mix of <b>numbers</b> and <b>words</b>, so you get both how much <i>and</i> why.</p></section>
+  <!-- forward arrow -->
+  <button class="fwd" id="fwd" type="button" aria-label="Next slide">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L19 12 M13 6 L19 12 L13 18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <!-- pointing hand cue -->
+  <svg class="hand" id="hand" viewBox="0 0 58 64" aria-hidden="true"><path d="M22 6 c0-3.5 6-3.5 6 0 v22 l2-1 c0-3.5 6-3.5 6 0 v2 c0-3.5 6-3.5 6 0 v3 c0-3.5 6-3.5 6 0 v12 c0 10-6 16-15 16 h-5 c-6 0-9-3-12-8 l-8-13 c-2-3 2-6 5-3 l6 6 z" fill="#FFFFFF" stroke="#000" stroke-width="3" stroke-linejoin="round"/><line x1="28" y1="30" x2="28" y2="38" stroke="#000" stroke-width="2"/><line x1="36" y1="31" x2="36" y2="38" stroke="#000" stroke-width="2"/><line x1="44" y1="33" x2="44" y2="39" stroke="#000" stroke-width="2"/></svg>
+</div>
+
+<script>
+  document.querySelectorAll('.tabset').forEach(ts => {
+    const tabs = [...ts.querySelectorAll('.tab3')], panes = [...ts.querySelectorAll('.pane3')];
+    tabs.forEach((t, i) => t.addEventListener('click', () => { tabs.forEach((x, k) => x.setAttribute('aria-selected', k === i ? 'true' : 'false')); panes.forEach((p, k) => p.classList.toggle('on', k === i)); }));
+  });
+  document.querySelectorAll('.copy').forEach(b => b.addEventListener('click', () => {
+    const t = document.getElementById(b.dataset.copy).textContent.trim().replace(/^"|"$/g, '');
+    const done = () => { b.setAttribute('aria-pressed', 'true'); b.textContent = '✓ Copied'; setTimeout(() => { b.setAttribute('aria-pressed', 'false'); b.textContent = '⧉ Copy prompt'; }, 1800); };
+    const fallback = () => { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); done(); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done, fallback); else fallback();
+  }));
+
+  window.W = Object.assign(window.W || {}, { onSlide: () => closePops() });
+  function closePops() {
+    document.querySelectorAll('.hbtn[data-pop]').forEach(b => { b.setAttribute('aria-expanded', 'false'); document.getElementById(b.dataset.pop).classList.remove('show'); });
+  }
+  document.querySelectorAll('.hbtn[data-pop]').forEach(b => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') === 'true';
+    closePops();
+    if (!open) { b.setAttribute('aria-expanded', 'true'); document.getElementById(b.dataset.pop).classList.add('show'); }
+  }));
+
+  (function () {
+    const prev = (window.W || {}).onSlide;
+    function run(s) {
+      s.querySelectorAll('[data-count]').forEach(el => {
+        const to = +el.dataset.count, dec = +(el.dataset.dec || 0), dl = +(el.dataset.delay || 0), dur = +(el.dataset.dur || 1400), pre = el.dataset.pre || '';
+        const fmt = v => pre + (dec ? v.toFixed(dec) : Math.round(v).toLocaleString('en-US'));
+        el.textContent = fmt(0); const t0 = performance.now() + dl;
+        (function tick(now) { const k = Math.min(1, Math.max(0, (now - t0) / dur)); el.textContent = fmt(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(tick); })(t0);
+        clearTimeout(el._t); el._t = setTimeout(() => { el.textContent = fmt(to); }, dl + dur + 80);
+      });
+    }
+    window.W = Object.assign(window.W || {}, { onSlide: (i, s) => { if (prev) prev(i, s); run(s); } });
+  })();
+
+  // Fill the whole embed: scale so the canvas is at least 800x600, then stretch it to the embed's shape
+  const canvas = document.getElementById('canvas');
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / 800, h / 600);
+    canvas.style.width = (w / scale) + 'px';
+    canvas.style.height = (h / scale) + 'px';
+    canvas.style.transform = `scale(${scale})`;
+    placeHand();
+  }
+  const W = window.W || {};
+  const slides = [...document.querySelectorAll('.slide')];
+  document.getElementById('dots').innerHTML = slides.map(() => '<span class="dot"></span>').join('');
+  const dots = [...document.querySelectorAll('.dot')];
+  const fwd = document.getElementById('fwd'), back = document.getElementById('back'), hand = document.getElementById('hand');
+  let current = 0, handTimer;
+
+  const gateOf = s => s.dataset.gate ? s.querySelector(s.dataset.gate) : null;
+  const locked = s => !!s.dataset.gate && !s.classList.contains('opened');
+  // until a gate is tapped the hand points at it; otherwise it points at the forward arrow
+  function placeHand() {
+    const s = slides[current], g = locked(s) ? gateOf(s) : null;
+    hand.classList.toggle('on-gate', !!g);
+    if (g) {
+      const c = canvas.getBoundingClientRect(), r = g.getBoundingClientRect(), k = c.width / canvas.offsetWidth;
+      hand.style.left = ((r.left + r.width * 0.65 - c.left) / k) + 'px';
+      hand.style.top = ((r.top + r.height * 0.55 - c.top) / k) + 'px';
+    } else { hand.style.left = ''; hand.style.top = ''; }
+  }
+  function showFwd(delay) {
+    const s = slides[current];
+    fwd.classList.toggle('hidden', current === slides.length - 1 || locked(s));
+    hand.style.opacity = 0;
+    clearTimeout(handTimer);
+    if (current < slides.length - 1 || locked(s)) handTimer = setTimeout(() => { placeHand(); hand.style.opacity = 1; }, delay != null ? delay : +(s.dataset.hand || 2600));
+  }
+  function go(to) {
+    slides.forEach((s, i) => s.classList.toggle('active', i === to));
+    current = to;
+    dots.forEach((d, i) => d.className = 'dot' + (i < current ? ' done' : i === current ? ' now' : ''));
+    back.classList.toggle('hidden', current === 0);
+    // load a clip only on its slide, and unload it when leaving so it stops playing
+    document.querySelectorAll('iframe[data-src]').forEach(f => {
+      const on = f.closest('.slide') === slides[current];
+      if (on && !f.getAttribute('src')) f.src = f.dataset.src; else if (!on && f.getAttribute('src')) f.removeAttribute('src');
+    });
+    if (W.onSlide) W.onSlide(current, slides[current]);
+    showFwd();
+  }
+  slides.forEach(s => {
+    const g = gateOf(s); if (!g) return;
+    g.addEventListener('click', () => {
+      if (s.classList.contains('opened')) return;
+      s.classList.add('opened');
+      if (W.onOpen) W.onOpen(s);
+      showFwd(+(s.dataset.after || 1600));
+    });
+  });
+  fwd.addEventListener('click', () => { if (current < slides.length - 1) go(current + 1); });
+  back.addEventListener('click', () => { if (current > 0) go(current - 1); });
+  document.getElementById('restart').addEventListener('click', () => { slides.forEach(s => s.classList.remove('opened')); if (W.onRestart) W.onRestart(); go(0); });
+  window.addEventListener('resize', fit);
+  // preview helper: #N opens slide N; add "open" (e.g. #4open) to show a gated slide already opened
+  const start = parseInt(location.hash.slice(1), 10);
+  const target = start >= 1 && start <= slides.length ? start - 1 : 0;
+  if (location.hash.includes('open')) { slides[target].classList.add('opened'); if (W.onOpen) W.onOpen(slides[target]); }
+  go(target);
+  fit();
+</script>
+</body>
+</html>
